@@ -47,7 +47,7 @@
   <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-7 flex-1">
     <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-slate-900 border border-cyan-800/40 rounded-2xl p-6 mb-7">
       <h2 class="text-xl sm:text-2xl font-bold mb-1.5 text-white">ទិញអាខោន Premium ដោយស្វ័យប្រវត្តិ 24/7</h2>
-      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីបញ្ចូលទឹកប្រាក់ចូលគណនី រួចទិញអាខោនភ្លាមៗដោយគ្មានការរង់ចាំ។</p>
+      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin ជាអ្នកបញ្ជាក់បូកលុយចូលគណនី) រួចទិញអាខោនភ្លាមៗ។</p>
     </div>
 
     <!-- Filter Buttons -->
@@ -76,14 +76,14 @@
     </div>
   </div>
 
-  <!-- Top-Up Modal with Real KHQR -->
+  <!-- Top-Up Modal with Real KHQR (Admin Approval Only) -->
   <div id="topup-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 my-auto">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ចូលគណនី (KHQR)</h3>
         <button onclick="closeTopupModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់ភ្លាមៗសម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-1001</b>។</p>
+      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-1001</b> (សមតុល្យនឹងត្រូវបញ្ជាក់បូកចូលដោយ Admin)។</p>
 
       <!-- Preset Amounts -->
       <div class="grid grid-cols-4 gap-2 mb-3">
@@ -110,7 +110,7 @@
           <div id="qr-amt-display" class="text-xl font-extrabold text-gray-900 mt-0.5">$5.00</div>
           <div class="text-[11px] text-gray-500 mb-3">⏱ ផុតកំណត់ក្នុង <span id="qr-timer" class="font-bold text-rose-600">05:00</span></div>
           <div id="qr-canvas-box" class="flex items-center justify-center min-h-[176px]"></div>
-          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">ស្កេនជាមួយ Bakong / ABA / ACLEDA</div>
+          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">ស្កេនរួចរង់ចាំ Admin បញ្ជាក់ដាក់ប្រាក់</div>
         </div>
       </div>
 
@@ -119,8 +119,8 @@
         <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
           ⬇️ រក្សាទុក QR
         </button>
-        <button onclick="simulateDemoPayment()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl text-xs font-bold transition">
-          ✅ បញ្ជាក់ទូទាត់ (Demo)
+        <button onclick="checkBalanceNow()" class="bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 py-2.5 rounded-xl text-xs font-bold transition">
+          🔄 ពិនិត្យសមតុល្យ
         </button>
       </div>
     </div>
@@ -138,7 +138,7 @@
   </div>
 
   <script>
-    const API_URL = window.location.origin.startsWith("http") ? window.location.origin : "http://127.0.0.1:5055";
+    const API_URL = window.location.origin.startsWith("http") ? window.location.origin : "https://khmersmm-tk4x.onrender.com";
     const DEFAULT_MEMBER = "KZ-1001";
 
     const ICONS = {
@@ -176,7 +176,7 @@
     let allAccounts = [...DEMO_ACCOUNTS];
     let currentCategory = "all";
     let memberId = localStorage.getItem("kz_member_id") || DEFAULT_MEMBER;
-    let balance = parseFloat(localStorage.getItem("kz_bal_" + memberId) || "0.00");
+    let balance = 0.00;
     let currentDepId = null;
     let qrInterval = null;
     let pollInterval = null;
@@ -186,7 +186,6 @@
       document.getElementById("u-bal").innerText = balance.toFixed(2);
       document.getElementById("topup-member-label").innerText = memberId;
       localStorage.setItem("kz_member_id", memberId);
-      localStorage.setItem("kz_bal_" + memberId, balance.toFixed(2));
     }
 
     function filterCategory(cat) {
@@ -232,7 +231,7 @@
 
     async function syncBackend() {
       try {
-        const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(2000) });
+        const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(3000) });
         if (accRes.ok) {
           const accData = await accRes.json();
           if (accData.ok && Array.isArray(accData.accounts)) {
@@ -243,7 +242,7 @@
             renderAccounts();
           }
         }
-        const userRes = await fetch(`${API_URL}/api/user/${encodeURIComponent(memberId)}`, { signal: AbortSignal.timeout(2000) });
+        const userRes = await fetch(`${API_URL}/api/user/${encodeURIComponent(memberId)}`, { signal: AbortSignal.timeout(3000) });
         if (userRes.ok) {
           const userData = await userRes.json();
           if (userData.ok) {
@@ -254,15 +253,19 @@
       } catch (_) {}
     }
 
+    async function checkBalanceNow() {
+      document.getElementById("qr-status-msg").innerText = "កំពុងពិនិត្យសមតុល្យពី Server...";
+      await syncBackend();
+      document.getElementById("qr-status-msg").innerText = `សមតុល្យបច្ចុប្បន្ន: $${balance.toFixed(2)}`;
+    }
+
     async function buyAccount(accId) {
       const acc = allAccounts.find(a => a.id === accId);
       if (!acc) return;
       const price = parseFloat(acc.price);
 
       if (balance < price) {
-        alert(`❌ ទឹកប្រាក់មិនគ្រប់គ្រាន់!
-អ្នកមាន $${balance.toFixed(2)} តែត្រូវការ $${price.toFixed(2)}។
-សូមចុច "+ ដាក់ប្រាក់" ដើម្បីស្កេន KHQR បញ្ចូលលុយជាមុនសិន។`);
+        alert(`❌ ទឹកប្រាក់មិនគ្រប់គ្រាន់!\nអ្នកមាន $${balance.toFixed(2)} តែត្រូវការ $${price.toFixed(2)}។\nសូមចុច "+ ដាក់ប្រាក់" ដើម្បីស្កេន KHQR និងរង់ចាំ Admin បញ្ជាក់បូកលុយជាមុនសិន។`);
         openTopupModal(price);
         return;
       }
@@ -274,7 +277,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: memberId, acc_id: acc.id }),
-          signal: AbortSignal.timeout(2500)
+          signal: AbortSignal.timeout(3000)
         });
         const data = await res.json();
         if (data.ok) {
@@ -283,18 +286,12 @@
           allAccounts = allAccounts.filter(item => item.id !== acc.id);
           renderAccounts();
           showResultModal(data.account_data);
-          return;
         } else {
           alert("❌ " + (data.error || "មិនអាចទិញបានទេ"));
-          return;
         }
-      } catch (_) {}
-
-      balance = Math.round((balance - price) * 100) / 100;
-      updateHeaderUI();
-      allAccounts = allAccounts.filter(item => item.id !== acc.id);
-      renderAccounts();
-      showResultModal(acc.data || `Account: ${acc.title} | Active (${acc.duration})`);
+      } catch (_) {
+        alert("⚠️ មិនអាចភ្ជាប់ទៅ Server បានទេ! សូមព្យាយាមម្តងទៀត។");
+      }
     }
 
     function crc16Ccitt(str) {
@@ -380,15 +377,15 @@
       if (!currentDepId) return;
       pollInterval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(2000) });
+          const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(3000) });
           const data = await res.json();
           if (data.ok && data.status === "PAID") {
             clearInterval(pollInterval);
             clearInterval(qrInterval);
             balance = parseFloat(data.balance);
             updateHeaderUI();
-            document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ ទទួលបានប្រាក់រួចរាល់!</span>`;
-            setTimeout(() => closeTopupModal(), 900);
+            document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ Admin បានបញ្ជាក់បូកលុយរួចរាល់!</span>`;
+            setTimeout(() => closeTopupModal(), 1000);
           }
         } catch (_) {}
       }, 4000);
@@ -402,7 +399,7 @@
       }
       const amt = Math.round(rawVal * 100) / 100;
       document.getElementById("qr-amt-display").innerText = `$${amt.toFixed(2)}`;
-      document.getElementById("qr-status-msg").innerText = "ស្កេនជាមួយ Bakong / ABA / ACLEDA";
+      document.getElementById("qr-status-msg").innerText = "កំពុងផ្ញើសំណើទៅ Admin...";
 
       let payload = buildKHQRPayload(amt);
       currentDepId = null;
@@ -412,15 +409,20 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: memberId, amount: amt }),
-          signal: AbortSignal.timeout(2500)
+          signal: AbortSignal.timeout(3500)
         });
         const data = await res.json();
         if (data.ok && data.qr_str) {
           payload = data.qr_str;
           currentDepId = data.dep_id;
+          document.getElementById("qr-status-msg").innerText = "ស្កេនរួចរង់ចាំ Admin បញ្ជាក់ដាក់ប្រាក់";
           startPaymentPolling();
+        } else {
+          document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចភ្ជាប់ Server បានទេ";
         }
-      } catch (_) {}
+      } catch (_) {
+        document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចភ្ជាប់ Server បានទេ";
+      }
 
       renderQRCodeBox(payload);
       startCountdown();
@@ -435,20 +437,6 @@
           : "preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition";
       });
       generateQR();
-    }
-
-    function simulateDemoPayment() {
-      const amt = parseFloat(document.getElementById("topup-amount").value);
-      if (isNaN(amt) || amt < 0.10) {
-        alert("ចំនួនទឹកប្រាក់មិនត្រឹមត្រូវ!");
-        return;
-      }
-      balance = Math.round((balance + amt) * 100) / 100;
-      updateHeaderUI();
-      clearInterval(qrInterval);
-      clearInterval(pollInterval);
-      document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បញ្ចូល $${amt.toFixed(2)} ជោគជ័យ!</span>`;
-      setTimeout(() => closeTopupModal(), 700);
     }
 
     function downloadQR() {
@@ -502,7 +490,6 @@
       const val = document.getElementById("member-input").value.trim();
       if (!val) return;
       memberId = val;
-      balance = parseFloat(localStorage.getItem("kz_bal_" + memberId) || "0.00");
       updateHeaderUI();
       closeMemberModal();
       syncBackend();
