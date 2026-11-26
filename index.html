@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairozen Store — ហាងលក់អាខោនស្វ័យប្រវត្តិ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Kantumruy Pro', sans-serif; background-color: #090d16; color: #f8fafc; }
+    .khqr-card { background: #ffffff; color: #111827; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 45px rgba(0,0,0,0.45); }
+    .khqr-header { background: #e11d48; color: #ffffff; padding: 10px 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.08em; }
+    #qr-canvas-box img, #qr-canvas-box canvas { margin: 0 auto; border-radius: 8px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Navbar -->
+  <nav class="bg-slate-950/90 backdrop-blur border-b border-slate-800 px-4 sm:px-6 py-4 sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-xl">⚡</div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold text-white leading-none">Kairozen Store</h1>
+          <span class="text-[11px] text-cyan-400">សេវាកម្មអាខោនស្វ័យប្រវត្តិ 24/7</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="flex items-center gap-2.5 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800">
+          <span class="text-xs text-slate-400">🆔 <b id="u-id" class="text-slate-200">KZ-1001</b></span>
+          <span class="text-slate-700">|</span>
+          <span class="text-sm text-emerald-400 font-bold">💰 $<span id="u-bal">0.00</span></span>
+        </div>
+        <button onclick="openTopupModal()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg shadow-cyan-500/20">
+          + ដាក់ប្រាក់
+        </button>
+        <button onclick="openMemberModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition">
+          ប្តូរគណនី
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-7 flex-1">
+    <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-slate-900 border border-cyan-800/40 rounded-2xl p-6 mb-7">
+      <h2 class="text-xl sm:text-2xl font-bold mb-1.5 text-white">ទិញអាខោន Premium ដោយស្វ័យប្រវត្តិ 24/7</h2>
+      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីបញ្ចូលទឹកប្រាក់ចូលគណនី រួចទិញអាខោនភ្លាមៗដោយគ្មានការរង់ចាំ។</p>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex flex-wrap items-center gap-2 mb-6">
+      <button onclick="filterCategory('all')" data-cat="all" class="cat-btn bg-cyan-500 text-slate-950 px-4 py-1.5 rounded-full text-xs font-bold transition">ទាំងអស់ (7)</button>
+      <button onclick="filterCategory('ai')" data-cat="ai" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-4 py-1.5 rounded-full text-xs font-semibold transition">AI Tools</button>
+      <button onclick="filterCategory('design')" data-cat="design" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-4 py-1.5 rounded-full text-xs font-semibold transition">Design & Video</button>
+      <button onclick="filterCategory('vpn')" data-cat="vpn" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-4 py-1.5 rounded-full text-xs font-semibold transition">VPN</button>
+      <button onclick="filterCategory('media')" data-cat="media" class="cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-4 py-1.5 rounded-full text-xs font-semibold transition">Streaming</button>
+    </div>
+
+    <!-- Accounts Grid -->
+    <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+  </main>
+
+  <!-- Member Modal -->
+  <div id="member-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6">
+      <h3 class="text-lg font-bold mb-1.5">លេខកូដគណនីសមាជិក</h3>
+      <p class="text-xs text-slate-400 mb-4">បញ្ចូលលេខកូដគណនីរបស់អ្នក ដើម្បីរក្សាទុកសមតុល្យទឹកប្រាក់ និងប្រវត្តិទិញ។</p>
+      <input type="text" id="member-input" placeholder="ឧទាហរណ៍: KZ-1001" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white mb-4 focus:outline-none focus:border-cyan-500">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeMemberModal()" class="px-4 py-2 text-sm text-slate-400 hover:text-white">បោះបង់</button>
+        <button onclick="saveMember()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-2 rounded-xl text-sm font-bold">រក្សាទុក</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-Up Modal with Real KHQR -->
+  <div id="topup-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 my-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ចូលគណនី (KHQR)</h3>
+        <button onclick="closeTopupModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់ភ្លាមៗសម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-1001</b>។</p>
+
+      <!-- Preset Amounts -->
+      <div class="grid grid-cols-4 gap-2 mb-3">
+        <button onclick="selectAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
+        <button onclick="selectAmount(5)" class="preset-amt bg-cyan-500/20 border border-cyan-500 text-cyan-300 py-2 rounded-xl text-xs font-bold transition">$5.00</button>
+        <button onclick="selectAmount(10)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$10.00</button>
+        <button onclick="selectAmount(20)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$20.00</button>
+      </div>
+
+      <!-- Custom Amount Input -->
+      <div class="flex gap-2 mb-4">
+        <input type="number" id="topup-amount" step="0.01" min="0.10" value="5.00" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500" placeholder="ចំនួន $ (ចាប់ពី 0.10)">
+        <button onclick="generateQR()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold transition">បង្កើត QR</button>
+      </div>
+
+      <!-- Real Bakong KHQR Card -->
+      <div class="khqr-card max-w-[270px] mx-auto mb-4">
+        <div class="khqr-header">
+          <span class="text-sm tracking-wider">KHQR</span>
+          <span class="text-[11px] bg-white/20 px-2 py-0.5 rounded">USD</span>
+        </div>
+        <div class="p-4 text-center">
+          <div class="text-xs font-bold text-gray-800">KhmerSmm</div>
+          <div id="qr-amt-display" class="text-xl font-extrabold text-gray-900 mt-0.5">$5.00</div>
+          <div class="text-[11px] text-gray-500 mb-3">⏱ ផុតកំណត់ក្នុង <span id="qr-timer" class="font-bold text-rose-600">05:00</span></div>
+          <div id="qr-canvas-box" class="flex items-center justify-center min-h-[176px]"></div>
+          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">ស្កេនជាមួយ Bakong / ABA / ACLEDA</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
+          ⬇️ រក្សាទុក QR
+        </button>
+        <button onclick="simulateDemoPayment()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl text-xs font-bold transition">
+          ✅ បញ្ជាក់ទូទាត់ (Demo)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purchase Success Modal -->
+  <div id="result-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl max-w-md w-full p-6 text-center">
+      <div class="text-4xl mb-2">🎉</div>
+      <h3 class="text-lg font-bold text-emerald-400 mb-1.5">ទិញអាខោនបានជោគជ័យ!</h3>
+      <p class="text-xs text-slate-400 mb-3">ចម្លងព័ត៌មានអាខោនរបស់អ្នកទុកប្រើប្រាស់៖</p>
+      <div id="acc-secret" class="bg-slate-950 border border-slate-800 p-3.5 rounded-xl font-mono text-xs sm:text-sm text-cyan-300 select-all mb-4 break-all"></div>
+      <button onclick="closeResultModal()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl text-sm font-bold transition">រួចរាល់</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:5055";
+    const DEFAULT_MEMBER = "KZ-1001";
+
+    const ICONS = {
+      chatgpt_pro: `<div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3.5 5.5"/><path d="M20.8 9a6 6 0 0 1-3 8.2c-2.2 1-4.8.5-6.5-1"/><path d="M15.6 20.6a6 6 0 0 1-8.5-2.2c-1.3-2.1-1-4.8.5-6.6"/><path d="M3.2 15a6 6 0 0 1 3-8.2c2.2-1 4.8-.5 6.5 1"/><path d="M8.4 3.4a6 6 0 0 1 8.5 2.2c1.3 2.1 1 4.8-.5 6.6"/></svg>
+      </div>`,
+      surfshark_vpn: `<div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v3"/></svg>
+      </div>`,
+      super_grok: `<div class="w-12 h-12 rounded-2xl bg-slate-700/50 border border-slate-600 flex items-center justify-center text-white">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4l16 16"/><path d="M20 4L4 20"/><path d="M12 3v18"/></svg>
+      </div>`,
+      youtube_premium: `<div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+      </div>`,
+      canva_pro: `<div class="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 font-extrabold text-xl">C</div>`,
+      gemini_pro: `<div class="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
+      </div>`,
+      capcut_pro: `<div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9l8 6"/><path d="M16 9l-8 6"/></svg>
+      </div>`
+    };
+
+    const DEMO_ACCOUNTS = [
+      { id: "acc_chatgpt_pro_1", key: "chatgpt_pro", title: "ChatGPT Pro", price: 10.00, duration: "1ខែ", category: "ai", desc: "គណនី ChatGPT Pro កម្រិតខ្ពស់ សម្រាប់ការងារ AI និង Coding រហ័សរលូន។", data: "Email: chatgpt.pro01@mail.com | Pass: ProPass#2026" },
+      { id: "acc_surfshark_1", key: "surfshark_vpn", title: "VPN Surfshark", price: 8.99, duration: "1ខែ", category: "vpn", desc: "ការពារភាពឯកជន លឿនលឿន ប្តូរ Server បានច្រើនប្រទេសដោយគ្មានដែនកំណត់។", data: "Email: surfshark01@mail.com | Pass: VpnSafe#2026" },
+      { id: "acc_super_grok_1", key: "super_grok", title: "Supper Grok", price: 10.00, duration: "1ខែ", category: "ai", desc: "មុខងារ AI ឆ្លើយតបរហ័ស វិភាគទិន្នន័យ និងបង្កើតមាតិកាពេញលេញ។", data: "Email: supergrok01@mail.com | Pass: GrokAI#2026" },
+      { id: "acc_yt_premium_1", key: "youtube_premium", title: "YouTube Premium", price: 3.00, duration: "1ខែ", category: "media", desc: "មើលវីដេអូគ្មានការរំខានដោយផ្សាយពាណិជ្ជកម្ម និងចាក់ Background បាន។", data: "Email: ytprem01@mail.com | Pass: MediaTube#2026" },
+      { id: "acc_canva_pro_1", key: "canva_pro", title: "Canva Pro", price: 12.99, duration: "1ខែ", category: "design", desc: "រចនាក្រាហ្វិក Template Pro, Background Remover និង Font ពេញលេញ។", data: "Email: canvapros01@mail.com | Pass: DesignPro#2026" },
+      { id: "acc_gemini_pro_18", key: "gemini_pro", title: "Gemini Pro", price: 5.00, duration: "18ខែ", category: "ai", desc: "ប្រើប្រាស់ Gemini Pro រយៈពេល 18 ខែពេញ ជំនួយការ AI ដ៏មានថាមពល។", data: "Email: geminipro01@mail.com | Pass: Gemini18M#2026" },
+      { id: "acc_capcut_pro_1", key: "capcut_pro", title: "CapCut Pro", price: 3.99, duration: "1ខែ", category: "design", desc: "កាត់តវីដេអូប្រើ Effect, Transitions និង Export គុណភាពខ្ពស់គ្មាន Watermark។", data: "Email: capcutpro01@mail.com | Pass: CapEdit#2026" }
+    ];
+
+    let allAccounts = [...DEMO_ACCOUNTS];
+    let currentCategory = "all";
+    let memberId = localStorage.getItem("kz_member_id") || DEFAULT_MEMBER;
+    let balance = parseFloat(localStorage.getItem("kz_bal_" + memberId) || "0.00");
+    let currentDepId = null;
+    let qrInterval = null;
+    let pollInterval = null;
+
+    function updateHeaderUI() {
+      document.getElementById("u-id").innerText = memberId;
+      document.getElementById("u-bal").innerText = balance.toFixed(2);
+      document.getElementById("topup-member-label").innerText = memberId;
+      localStorage.setItem("kz_member_id", memberId);
+      localStorage.setItem("kz_bal_" + memberId, balance.toFixed(2));
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll(".cat-btn").forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = "cat-btn bg-cyan-500 text-slate-950 px-4 py-1.5 rounded-full text-xs font-bold transition";
+        } else {
+          btn.className = "cat-btn bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 px-4 py-1.5 rounded-full text-xs font-semibold transition";
+        }
+      });
+      renderAccounts();
+    }
+
+    function renderAccounts() {
+      const grid = document.getElementById("accounts-grid");
+      const list = currentCategory === "all"
+        ? allAccounts
+        : allAccounts.filter(a => a.category === currentCategory);
+
+      if (!list.length) {
+        grid.innerHTML = `<div class="col-span-full text-center text-slate-400 py-10">មិនមានអាខោនក្នុងប្រភេទនេះទេ។</div>`;
+        return;
+      }
+
+      grid.innerHTML = list.map(acc => `
+        <div class="bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 flex flex-col justify-between transition">
+          <div>
+            <div class="flex items-start justify-between gap-3 mb-4">
+              ${ICONS[acc.key] || ICONS.chatgpt_pro}
+              <span class="bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg text-xs font-semibold">${acc.duration}</span>
+            </div>
+            <h4 class="font-bold text-base text-white mb-1">${acc.title}</h4>
+            <div class="text-lg font-extrabold text-emerald-400 mb-2">$${Number(acc.price).toFixed(2)} <span class="text-xs font-normal text-slate-400">/ ${acc.duration}</span></div>
+            <p class="text-xs text-slate-400 leading-relaxed mb-5">${acc.desc}</p>
+          </div>
+          <button onclick="buyAccount('${acc.id}')" class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 py-2.5 rounded-xl text-sm font-bold transition">
+            ទិញឥឡូវនេះ
+          </button>
+        </div>
+      `).join("");
+    }
+
+    async function syncBackend() {
+      try {
+        const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(1500) });
+        if (accRes.ok) {
+          const accData = await accRes.json();
+          if (accData.ok && Array.isArray(accData.accounts)) {
+            allAccounts = accData.accounts.map(a => {
+              const fallback = DEMO_ACCOUNTS.find(d => d.id === a.id || d.title === a.title) || {};
+              return { ...fallback, ...a, key: a.key || fallback.key || "chatgpt_pro", category: a.category || fallback.category || "ai", duration: a.duration || fallback.duration || "1ខែ" };
+            });
+            renderAccounts();
+          }
+        }
+        const userRes = await fetch(`${API_URL}/api/user/${encodeURIComponent(memberId)}`, { signal: AbortSignal.timeout(1500) });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.ok) {
+            balance = parseFloat(userData.balance || 0);
+            updateHeaderUI();
+          }
+        }
+      } catch (_) {}
+    }
+
+    async function buyAccount(accId) {
+      const acc = allAccounts.find(a => a.id === accId);
+      if (!acc) return;
+      const price = parseFloat(acc.price);
+
+      if (balance < price) {
+        alert(`❌ ទឹកប្រាក់មិនគ្រប់គ្រាន់!\nអ្នកមាន $${balance.toFixed(2)} តែត្រូវការ $${price.toFixed(2)}។\nសូមចុច "+ ដាក់ប្រាក់" ដើម្បីស្កេន KHQR បញ្ចូលលុយជាមុនសិន។`);
+        openTopupModal(price);
+        return;
+      }
+
+      if (!confirm(`តើអ្នកចង់ទិញ "${acc.title}" (${acc.duration}) ក្នុងតម្លៃ $${price.toFixed(2)} មែនទេ?`)) return;
+
+      try {
+        const res = await fetch(`${API_URL}/api/buy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: memberId, acc_id: acc.id }),
+          signal: AbortSignal.timeout(2500)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          balance = parseFloat(data.new_balance);
+          updateHeaderUI();
+          allAccounts = allAccounts.filter(item => item.id !== acc.id);
+          renderAccounts();
+          showResultModal(data.account_data);
+          return;
+        } else {
+          alert("❌ " + (data.error || "មិនអាចទិញបានទេ"));
+          return;
+        }
+      } catch (_) {}
+
+      balance = Math.round((balance - price) * 100) / 100;
+      updateHeaderUI();
+      allAccounts = allAccounts.filter(item => item.id !== acc.id);
+      renderAccounts();
+      showResultModal(acc.data || `Account: ${acc.title} | Active (${acc.duration})`);
+    }
+
+    function buildKHQRPayload(amount) {
+      const amtStr = Number(amount).toFixed(2);
+      const tlv = (tag, val) => {
+        const s = String(val);
+        return tag + String(s.length).padStart(2, "0") + s;
+      };
+      const merchantInfo = tlv("00", "mon_samnang@bkrt") + tlv("01", memberId);
+      const addData = tlv("01", "KZSTORE") + tlv("07", memberId);
+      return (
+        tlv("00", "01") +
+        tlv("01", "12") +
+        tlv("29", merchantInfo) +
+        tlv("52", "5999") +
+        tlv("53", "840") +
+        tlv("54", amtStr) +
+        tlv("58", "KH") +
+        tlv("59", "KhmerSmm") +
+        tlv("60", "Phnom Penh") +
+        tlv("62", addData) +
+        "6304KHQR"
+      );
+    }
+
+    function renderQRCodeBox(payloadText) {
+      const box = document.getElementById("qr-canvas-box");
+      box.innerHTML = "";
+      if (typeof QRCode !== "undefined") {
+        new QRCode(box, {
+          text: payloadText,
+          width: 170,
+          height: 170,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        const img = document.createElement("img");
+        img.src = "https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=" + encodeURIComponent(payloadText);
+        img.alt = "Bakong KHQR";
+        img.className = "w-[170px] h-[170px] mx-auto rounded-lg";
+        box.appendChild(img);
+      }
+    }
+
+    function startCountdown() {
+      clearInterval(qrInterval);
+      let rem = 300;
+      const timerEl = document.getElementById("qr-timer");
+      const updateClock = () => {
+        const m = String(Math.floor(rem / 60)).padStart(2, "0");
+        const s = String(rem % 60).padStart(2, "0");
+        timerEl.innerText = `${m}:${s}`;
+        if (rem <= 0) {
+          clearInterval(qrInterval);
+          clearInterval(pollInterval);
+          document.getElementById("qr-status-msg").innerText = "⏰ QR ផុតកំណត់! ចុច បង្កើត QR ម្ដងទៀត";
+        }
+        rem--;
+      };
+      updateClock();
+      qrInterval = setInterval(updateClock, 1000);
+    }
+
+    function startPaymentPolling() {
+      clearInterval(pollInterval);
+      if (!currentDepId) return;
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(1500) });
+          const data = await res.json();
+          if (data.ok && data.status === "PAID") {
+            clearInterval(pollInterval);
+            clearInterval(qrInterval);
+            balance = parseFloat(data.balance);
+            updateHeaderUI();
+            document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ ទទួលបានប្រាក់រួចរាល់!</span>`;
+            setTimeout(() => closeTopupModal(), 900);
+          }
+        } catch (_) {}
+      }, 4000);
+    }
+
+    async function generateQR() {
+      const rawVal = parseFloat(document.getElementById("topup-amount").value);
+      if (isNaN(rawVal) || rawVal < 0.10) {
+        alert("សូមបញ្ចូលចំនួនទឹកប្រាក់ចាប់ពី $0.10 ឡើងទៅ!");
+        return;
+      }
+      const amt = Math.round(rawVal * 100) / 100;
+      document.getElementById("qr-amt-display").innerText = `$${amt.toFixed(2)}`;
+      document.getElementById("qr-status-msg").innerText = "ស្កេនជាមួយ Bakong / ABA / ACLEDA";
+
+      let payload = buildKHQRPayload(amt);
+      currentDepId = null;
+
+      try {
+        const res = await fetch(`${API_URL}/api/create_khqr`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: memberId, amount: amt }),
+          signal: AbortSignal.timeout(2000)
+        });
+        const data = await res.json();
+        if (data.ok && data.qr_str) {
+          payload = data.qr_str;
+          currentDepId = data.dep_id;
+          startPaymentPolling();
+        }
+      } catch (_) {}
+
+      renderQRCodeBox(payload);
+      startCountdown();
+    }
+
+    function selectAmount(amt) {
+      document.getElementById("topup-amount").value = Number(amt).toFixed(2);
+      document.querySelectorAll(".preset-amt").forEach(btn => {
+        const active = parseFloat(btn.innerText.replace("$", "")) === Number(amt);
+        btn.className = active
+          ? "preset-amt bg-cyan-500/20 border border-cyan-500 text-cyan-300 py-2 rounded-xl text-xs font-bold transition"
+          : "preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition";
+      });
+      generateQR();
+    }
+
+    function simulateDemoPayment() {
+      const amt = parseFloat(document.getElementById("topup-amount").value);
+      if (isNaN(amt) || amt < 0.10) {
+        alert("ចំនួនទឹកប្រាក់មិនត្រឹមត្រូវ!");
+        return;
+      }
+      balance = Math.round((balance + amt) * 100) / 100;
+      updateHeaderUI();
+      clearInterval(qrInterval);
+      clearInterval(pollInterval);
+      document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បញ្ចូល $${amt.toFixed(2)} ជោគជ័យ!</span>`;
+      setTimeout(() => closeTopupModal(), 700);
+    }
+
+    function downloadQR() {
+      const canvas = document.querySelector("#qr-canvas-box canvas");
+      const img = document.querySelector("#qr-canvas-box img");
+      const link = document.createElement("a");
+      if (canvas) {
+        link.href = canvas.toDataURL("image/png");
+      } else if (img) {
+        link.href = img.src;
+      } else {
+        return;
+      }
+      link.download = `khqr_${memberId}_${document.getElementById("topup-amount").value}.png`;
+      link.click();
+    }
+
+    function openTopupModal(minAmt) {
+      if (minAmt && minAmt > 0) {
+        document.getElementById("topup-amount").value = Number(minAmt).toFixed(2);
+      }
+      document.getElementById("topup-member-label").innerText = memberId;
+      const modal = document.getElementById("topup-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      generateQR();
+    }
+
+    function closeTopupModal() {
+      clearInterval(qrInterval);
+      clearInterval(pollInterval);
+      const modal = document.getElementById("topup-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function openMemberModal() {
+      document.getElementById("member-input").value = memberId;
+      const modal = document.getElementById("member-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeMemberModal() {
+      const modal = document.getElementById("member-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function saveMember() {
+      const val = document.getElementById("member-input").value.trim();
+      if (!val) return;
+      memberId = val;
+      balance = parseFloat(localStorage.getItem("kz_bal_" + memberId) || "0.00");
+      updateHeaderUI();
+      closeMemberModal();
+      syncBackend();
+    }
+
+    function showResultModal(secretText) {
+      document.getElementById("acc-secret").innerText = secretText;
+      const modal = document.getElementById("result-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeResultModal() {
+      const modal = document.getElementById("result-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    updateHeaderUI();
+    renderAccounts();
+    syncBackend();
+  </script>
+</body>
+</html>
