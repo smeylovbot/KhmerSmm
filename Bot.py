@@ -3,7 +3,7 @@
 ╔══════════════════════════════════════════════════════════════╗
 ║     Kairozen Deposit Bot — カイロゼン                          ║
 ║     User: 💳 ដាក់ប្រាក់ · Admin: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ   ║
-║     + Account Store API & Bakong KHQR Web Integration        ║
+║     + Safe Account Store API, Order History & KHQR           ║
 ║     Compatible: Python 3.10+ · Termux / Pydroid 3 / Render   ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -76,30 +76,37 @@ MERCHANT_CITY      = "Phnom Penh"
 DEPOSIT_EXPIRE_SEC = 300
 
 # ═══════════════════════════════════════════════════════════
-#  FILES
+#  FILES & THREAD LOCK (កុំឱ្យបាត់ទិន្នន័យ ឬទិញជាន់គ្នា)
 # ═══════════════════════════════════════════════════════════
+DATA_LOCK      = threading.RLock()
 WALLETS_FILE   = "aio_wallets.json"
 USERS_FILE     = "aio_users.json"
 STORE_DEP_FILE = "aio_store_deposits.json"
 ACCOUNTS_FILE  = "aio_accounts.json"
+ORDERS_FILE    = "aio_orders.json"
 
 def _load(path, default):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
+    with DATA_LOCK:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return default
 
 def _save(path, data):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"{CLR_RED}Save {path}: {e}{CLR_RESET}")
+    with DATA_LOCK:
+        try:
+            tmp_path = f"{path}.tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, path)
+        except Exception as e:
+            logger.error(f"{CLR_RED}Save {path}: {e}{CLR_RESET}")
 
 wallets    = _load(WALLETS_FILE, {})
 users_db   = _load(USERS_FILE, {})
 store_deps = _load(STORE_DEP_FILE, {})
+orders_db  = _load(ORDERS_FILE, {})
 waiting    = {}
 
 default_accounts = [
@@ -112,7 +119,8 @@ default_accounts = [
         "category": "ai",
         "desc": "គណនី ChatGPT Pro កម្រិតខ្ពស់ សម្រាប់ការងារ AI និង Coding រហ័សរលូន។",
         "data": "Email: chatgpt.pro01@mail.com | Pass: ProPass#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_surfshark_1",
@@ -123,7 +131,8 @@ default_accounts = [
         "category": "vpn",
         "desc": "ការពារភាពឯកជន លឿនលឿន ប្តូរ Server បានច្រើនប្រទេសដោយគ្មានដែនកំណត់។",
         "data": "Email: surfshark01@mail.com | Pass: VpnSafe#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_super_grok_1",
@@ -134,7 +143,8 @@ default_accounts = [
         "category": "ai",
         "desc": "មុខងារ AI ឆ្លើយតបរហ័ស វិភាគទិន្នន័យ និងបង្កើតមាតិកាពេញលេញ។",
         "data": "Email: supergrok01@mail.com | Pass: GrokAI#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_yt_premium_1",
@@ -145,7 +155,8 @@ default_accounts = [
         "category": "media",
         "desc": "មើលវីដេអូគ្មានការរំខានដោយផ្សាយពាណិជ្ជកម្ម និងចាក់ Background បាន។",
         "data": "Email: ytprem01@mail.com | Pass: MediaTube#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_canva_pro_1",
@@ -156,7 +167,8 @@ default_accounts = [
         "category": "design",
         "desc": "រចនាក្រាហ្វិក Template Pro, Background Remover និង Font ពេញលេញ។",
         "data": "Email: canvapros01@mail.com | Pass: DesignPro#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_gemini_pro_18",
@@ -167,7 +179,8 @@ default_accounts = [
         "category": "ai",
         "desc": "ប្រើប្រាស់ Gemini Pro រយៈពេល 18 ខែពេញ ជំនួយការ AI ដ៏មានថាមពល។",
         "data": "Email: geminipro01@mail.com | Pass: Gemini18M#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     },
     {
         "id": "acc_capcut_pro_1",
@@ -178,7 +191,8 @@ default_accounts = [
         "category": "design",
         "desc": "កាត់តវីដេអូប្រើ Effect, Transitions និង Export គុណភាពខ្ពស់គ្មាន Watermark។",
         "data": "Email: capcutpro01@mail.com | Pass: CapEdit#2026",
-        "sold": False
+        "sold": False,
+        "buyer": None
     }
 ]
 
@@ -198,11 +212,28 @@ def _make_session():
 http = _make_session()
 
 def bal(uid):
-    return round(float(wallets.get(str(uid), 0.0)), 2)
+    with DATA_LOCK:
+        return round(float(wallets.get(str(uid), 0.0)), 2)
 
 def add_bal(uid, amt):
-    wallets[str(uid)] = round(bal(uid) + float(amt), 2)
-    _save(WALLETS_FILE, wallets)
+    with DATA_LOCK:
+        wallets[str(uid)] = round(bal(uid) + float(amt), 2)
+        _save(WALLETS_FILE, wallets)
+
+def record_order(mid, acc):
+    with DATA_LOCK:
+        mid_str = str(mid)
+        orders_db.setdefault(mid_str, [])
+        orders_db[mid_str].insert(0, {
+            "order_id": f"ORD-{int(time.time())}-{len(orders_db[mid_str]) + 1}",
+            "acc_id": acc["id"],
+            "title": acc["title"],
+            "duration": acc.get("duration", "1ខែ"),
+            "price": round(float(acc["price"]), 2),
+            "account_data": acc["data"],
+            "purchased_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        })
+        _save(ORDERS_FILE, orders_db)
 
 def main_kb():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -272,17 +303,22 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
     last_update_min = -1
 
     while time.time() < deadline:
-        dep = store_deps.get(dep_id)
-        if not dep or dep.get("status") != "pending":
-            return
+        with DATA_LOCK:
+            dep = store_deps.get(dep_id)
+            if not dep or dep.get("status") != "pending":
+                return
+            md5 = dep.get("md5", "")
 
-        md5 = dep.get("md5", "")
         if md5 and _check_bakong(md5):
-            total_credit = round(amount, 2)
-            add_bal(uid_str, total_credit)
-            store_deps[dep_id]["status"] = "confirmed"
-            _save(STORE_DEP_FILE, store_deps)
-            new_b = bal(uid_str)
+            with DATA_LOCK:
+                dep = store_deps.get(dep_id)
+                if not dep or dep.get("status") != "pending":
+                    return
+                total_credit = round(amount, 2)
+                add_bal(uid_str, total_credit)
+                store_deps[dep_id]["status"] = "confirmed"
+                _save(STORE_DEP_FILE, store_deps)
+                new_b = bal(uid_str)
 
             msg = (
                 f"✅ <b>ដាក់លុយបានជោគជ័យ!</b>\n"
@@ -336,24 +372,25 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
 
         time.sleep(5)
 
-    dep = store_deps.get(dep_id)
-    if dep and dep.get("status") == "pending":
-        dep["status"] = "expired"
-        _save(STORE_DEP_FILE, store_deps)
-        if uid is not None:
-            try:
-                bot.send_message(uid, "⏰ <b>QR ផុតកំណត់!</b> សូមចុច <b>💳 ដាក់ប្រាក់</b> ម្ដងទៀត", parse_mode="HTML", reply_markup=main_kb())
-            except Exception:
-                pass
-            if sent_msg_id:
+    with DATA_LOCK:
+        dep = store_deps.get(dep_id)
+        if dep and dep.get("status") == "pending":
+            dep["status"] = "expired"
+            _save(STORE_DEP_FILE, store_deps)
+            if uid is not None:
                 try:
-                    bot.edit_message_caption(
-                        chat_id=uid, message_id=sent_msg_id,
-                        caption=f"💳 <b>ដាក់ប្រាក់ (ផុតកំណត់ ⏰)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
-                        parse_mode="HTML"
-                    )
+                    bot.send_message(uid, "⏰ <b>QR ផុតកំណត់!</b> សូមចុច <b>💳 ដាក់ប្រាក់</b> ម្ដងទៀត", parse_mode="HTML", reply_markup=main_kb())
                 except Exception:
                     pass
+                if sent_msg_id:
+                    try:
+                        bot.edit_message_caption(
+                            chat_id=uid, message_id=sent_msg_id,
+                            caption=f"💳 <b>ដាក់ប្រាក់ (ផុតកំណត់ ⏰)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
+                            parse_mode="HTML"
+                        )
+                    except Exception:
+                        pass
 
 def _send_deposit_qr(uid, amount):
     uid_str = str(uid)
@@ -370,14 +407,15 @@ def _send_deposit_qr(uid, amount):
         md5_hash = hashlib.md5(qr_str.encode()).hexdigest()
 
     dep_id = f"dep_{uid}_{int(time.time())}"
-    store_deps[dep_id] = {
-        "uid": uid_str,
-        "amount": amount,
-        "status": "pending",
-        "md5": md5_hash,
-        "qr_str": qr_str,
-    }
-    _save(STORE_DEP_FILE, store_deps)
+    with DATA_LOCK:
+        store_deps[dep_id] = {
+            "uid": uid_str,
+            "amount": amount,
+            "status": "pending",
+            "md5": md5_hash,
+            "qr_str": qr_str,
+        }
+        _save(STORE_DEP_FILE, store_deps)
 
     cap = (
         f"💳 <b>ដាក់ប្រាក់</b>\n"
@@ -452,16 +490,17 @@ def _send_deposit_qr(uid, amount):
     ).start()
 
 def _track_user(message):
-    uid = message.chat.id
-    uid_str = str(uid)
-    u = message.from_user
-    users_db[uid_str] = {
-        "name":     u.first_name or "",
-        "username": u.username or "",
-        "last":     int(time.time()),
-    }
-    _save(USERS_FILE, users_db)
-    wallets.setdefault(uid_str, 0.0)
+    with DATA_LOCK:
+        uid = message.chat.id
+        uid_str = str(uid)
+        u = message.from_user
+        users_db[uid_str] = {
+            "name":     u.first_name or "",
+            "username": u.username or "",
+            "last":     int(time.time()),
+        }
+        _save(USERS_FILE, users_db)
+        wallets.setdefault(uid_str, 0.0)
 
 def _show_welcome(uid, name="User"):
     caption = (
@@ -514,26 +553,28 @@ def cb_manual_dep(call):
         return
 
     _, action, dep_id = call.data.split(":", 2)
-    dep = store_deps.get(dep_id)
-    if not dep:
-        bot.answer_callback_query(call.id, "❌ សំណើនេះរកមិនឃើញ!", show_alert=True)
-        return
-
-    target_uid = str(dep["uid"])
-    amount = float(dep["amount"])
-    total_credit = round(amount, 2)
-
-    if action == "approve":
-        if dep.get("status") == "confirmed":
-            bot.answer_callback_query(call.id, "⚠️ បានបញ្ជាក់រួចរាល់ហើយ!", show_alert=True)
+    with DATA_LOCK:
+        dep = store_deps.get(dep_id)
+        if not dep:
+            bot.answer_callback_query(call.id, "❌ សំណើនេះរកមិនឃើញ!", show_alert=True)
             return
 
-        add_bal(target_uid, total_credit)
-        dep["status"] = "confirmed"
-        _save(STORE_DEP_FILE, store_deps)
-        new_b = bal(target_uid)
-        bot.answer_callback_query(call.id, "✅ បានដាក់ប្រាក់ឱ្យគេរួចរាល់!")
+        target_uid = str(dep["uid"])
+        amount = float(dep["amount"])
+        total_credit = round(amount, 2)
 
+        if action == "approve":
+            if dep.get("status") == "confirmed":
+                bot.answer_callback_query(call.id, "⚠️ បានបញ្ជាក់រួចរាល់ហើយ!", show_alert=True)
+                return
+
+            add_bal(target_uid, total_credit)
+            dep["status"] = "confirmed"
+            _save(STORE_DEP_FILE, store_deps)
+            new_b = bal(target_uid)
+
+    if action == "approve":
+        bot.answer_callback_query(call.id, "✅ បានដាក់ប្រាក់ឱ្យគេរួចរាល់!")
         try:
             bot.edit_message_text(
                 f"✅ <b>បានដាក់ប្រាក់ឱ្យគេរួចរាល់!</b>\n━━━━━━━━━━━━━━━━━━\n👤 User: <code>{target_uid}</code>\n💰 ចំនួន: <b>${total_credit:.2f}</b>\n💳 សមតុល្យថ្មី: <b>${new_b:.2f}</b>",
@@ -553,8 +594,9 @@ def cb_manual_dep(call):
                 pass
 
     elif action == "reject":
-        dep["status"] = "rejected"
-        _save(STORE_DEP_FILE, store_deps)
+        with DATA_LOCK:
+            dep["status"] = "rejected"
+            _save(STORE_DEP_FILE, store_deps)
         bot.answer_callback_query(call.id, "❌ បានបដិសេធសំណើ!")
         try:
             bot.edit_message_text(
@@ -585,25 +627,27 @@ def handle(message):
 
     if uid == ADMIN_ID:
         if text == "👥 អ្នកប្រើប្រាស់":
-            if not users_db and not wallets:
-                bot.send_message(uid, "❌ គ្មានអ្នកប្រើប្រាស់", parse_mode="HTML", reply_markup=admin_kb())
-                return
-            lines = ["<b>👥 អ្នកប្រើប្រាស់ & Member</b>\n━━━━━━━━━━━━━━━━━━"]
-            for u_id, u_info in sorted(users_db.items(), key=lambda x: x[1].get("last", 0), reverse=True)[:30]:
-                name = u_info.get("name") or "?"
-                uname = f"@{u_info['username']}" if u_info.get("username") else ""
-                b = bal(u_id)
-                lines.append(f"👤 <b>{name}</b> {uname}\n🆔 <code>{u_id}</code> · 💰 <b>${b:.2f}</b>")
-            for m_id, m_bal in wallets.items():
-                if m_id not in users_db:
-                    lines.append(f"🌐 Member <code>{m_id}</code> · 💰 <b>${float(m_bal):.2f}</b>")
+            with DATA_LOCK:
+                if not users_db and not wallets:
+                    bot.send_message(uid, "❌ គ្មានអ្នកប្រើប្រាស់", parse_mode="HTML", reply_markup=admin_kb())
+                    return
+                lines = ["<b>👥 អ្នកប្រើប្រាស់ & Member</b>\n━━━━━━━━━━━━━━━━━━"]
+                for u_id, u_info in sorted(users_db.items(), key=lambda x: x[1].get("last", 0), reverse=True)[:30]:
+                    name = u_info.get("name") or "?"
+                    uname = f"@{u_info['username']}" if u_info.get("username") else ""
+                    b = bal(u_id)
+                    lines.append(f"👤 <b>{name}</b> {uname}\n🆔 <code>{u_id}</code> · 💰 <b>${b:.2f}</b>")
+                for m_id, m_bal in wallets.items():
+                    if m_id not in users_db:
+                        lines.append(f"🌐 Member <code>{m_id}</code> · 💰 <b>${float(m_bal):.2f}</b>")
             bot.send_message(uid, "\n".join(lines)[:4000], parse_mode="HTML", reply_markup=admin_kb())
             return
 
         if text == "📊 ស្ថិតិ":
-            total_users = max(len(users_db), len(wallets))
-            total_deps  = sum(float(d.get("amount", 0)) for d in store_deps.values() if d.get("status") == "confirmed")
-            total_bal   = sum(float(v) for v in wallets.values())
+            with DATA_LOCK:
+                total_users = max(len(users_db), len(wallets))
+                total_deps  = sum(float(d.get("amount", 0)) for d in store_deps.values() if d.get("status") == "confirmed")
+                total_bal   = sum(float(v) for v in wallets.values())
             bot.send_message(
                 uid,
                 f"📊 <b>ស្ថិតិ</b>\n"
@@ -696,30 +740,43 @@ def api_get_user(member_id):
     mid = str(member_id).strip()
     if not mid:
         return jsonify({"ok": False, "error": "Member ID មិនត្រឹមត្រូវ!"}), 400
-    wallets.setdefault(mid, 0.0)
-    _save(WALLETS_FILE, wallets)
+    with DATA_LOCK:
+        wallets.setdefault(mid, 0.0)
+        _save(WALLETS_FILE, wallets)
+        user_orders = list(orders_db.get(mid, []))
     return jsonify({
         "ok": True,
         "uid": mid,
         "name": f"Member {mid}",
-        "balance": bal(mid)
+        "balance": bal(mid),
+        "orders": user_orders
     })
+
+@flask_app.route("/api/orders/<member_id>", methods=["GET"])
+def api_get_orders(member_id):
+    mid = str(member_id).strip()
+    if not mid:
+        return jsonify({"ok": False, "error": "Member ID មិនត្រឹមត្រូវ!"}), 400
+    with DATA_LOCK:
+        user_orders = list(orders_db.get(mid, []))
+    return jsonify({"ok": True, "uid": mid, "orders": user_orders})
 
 @flask_app.route("/api/accounts", methods=["GET"])
 def api_get_accounts():
-    accs = _load(ACCOUNTS_FILE, default_accounts)
-    available = [
-        {
-            "id": a["id"],
-            "key": a.get("key", a["id"]),
-            "title": a["title"],
-            "price": float(a["price"]),
-            "duration": a.get("duration", "1ខែ"),
-            "category": a.get("category", "ai"),
-            "desc": a["desc"]
-        }
-        for a in accs if not a.get("sold", False)
-    ]
+    with DATA_LOCK:
+        accs = _load(ACCOUNTS_FILE, default_accounts)
+        available = [
+            {
+                "id": a["id"],
+                "key": a.get("key", a["id"]),
+                "title": a["title"],
+                "price": float(a["price"]),
+                "duration": a.get("duration", "1ខែ"),
+                "category": a.get("category", "ai"),
+                "desc": a["desc"]
+            }
+            for a in accs if not a.get("sold", False)
+        ]
     return jsonify({"ok": True, "accounts": available})
 
 @flask_app.route("/api/buy", methods=["POST"])
@@ -730,35 +787,46 @@ def api_buy_account():
 
     if not mid:
         return jsonify({"ok": False, "error": "សូមបញ្ចូល Member ID ជាមុនសិន!"}), 400
+    if not acc_id:
+        return jsonify({"ok": False, "error": "មិនមានលេខកូដអីវ៉ាន់ទេ!"}), 400
 
-    accs = _load(ACCOUNTS_FILE, default_accounts)
-    target_acc = next((a for a in accs if a["id"] == acc_id and not a.get("sold", False)), None)
-    if not target_acc:
-        return jsonify({"ok": False, "error": "អាខោននេះត្រូវបានលក់រួចហើយ ឬអស់ពីស្តុក!"}), 400
+    with DATA_LOCK:
+        accs = _load(ACCOUNTS_FILE, default_accounts)
+        target_acc = next((a for a in accs if a["id"] == acc_id and not a.get("sold", False)), None)
+        if not target_acc:
+            return jsonify({"ok": False, "error": "អីវ៉ាន់នេះត្រូវបានលក់រួចហើយ ឬអស់ពីស្តុក!"}), 400
 
-    price = round(float(target_acc["price"]), 2)
-    current_bal = bal(mid)
+        price = round(float(target_acc["price"]), 2)
+        current_bal = bal(mid)
 
-    if current_bal < price:
-        return jsonify({
-            "ok": False,
-            "error": f"ទឹកប្រាក់មិនគ្រប់គ្រាន់! សមតុល្យបច្ចុប្បន្ន ${current_bal:.2f} (ត្រូវការ ${price:.2f})។"
-        }), 400
+        if current_bal < price:
+            return jsonify({
+                "ok": False,
+                "error": f"ទឹកប្រាក់មិនគ្រប់គ្រាន់! សមតុល្យបច្ចុប្បន្ន ${current_bal:.2f} (ត្រូវការ ${price:.2f})។"
+            }), 400
 
-    add_bal(mid, -price)
-    target_acc["sold"] = True
-    target_acc["buyer"] = mid
-    _save(ACCOUNTS_FILE, accs)
+        wallets[mid] = round(current_bal - price, 2)
+        _save(WALLETS_FILE, wallets)
+
+        target_acc["sold"] = True
+        target_acc["buyer"] = mid
+        _save(ACCOUNTS_FILE, accs)
+
+        record_order(mid, target_acc)
+        new_b = bal(mid)
+        acc_secret = target_acc["data"]
+        acc_title = target_acc["title"]
+        acc_dur = target_acc.get("duration", "1ខែ")
 
     try:
         bot.send_message(
             ADMIN_ID,
-            f"🛒 <b>ការលក់អាខោនពីវេបសាយ!</b>\n"
+            f"🛒 <b>ការលក់អីវ៉ាន់ពីវេបសាយ!</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🆔 Member: <code>{mid}</code>\n"
-            f"📦 ផលិតផល: <b>{target_acc['title']} ({target_acc.get('duration', '1ខែ')})</b>\n"
+            f"📦 ផលិតផល: <b>{acc_title} ({acc_dur})</b>\n"
             f"💵 តម្លៃ: <b>${price:.2f}</b>\n"
-            f"💳 សមតុល្យនៅសល់: <b>${bal(mid):.2f}</b>",
+            f"💳 សមតុល្យនៅសល់: <b>${new_b:.2f}</b>",
             parse_mode="HTML"
         )
     except Exception:
@@ -766,8 +834,8 @@ def api_buy_account():
 
     return jsonify({
         "ok": True,
-        "account_data": target_acc["data"],
-        "new_balance": bal(mid)
+        "account_data": acc_secret,
+        "new_balance": new_b
     })
 
 @flask_app.route("/api/create_khqr", methods=["POST"])
@@ -794,14 +862,15 @@ def api_create_khqr():
         md5_hash = hashlib.md5(qr_str.encode()).hexdigest()
 
     dep_id = f"web_{mid}_{int(time.time())}"
-    store_deps[dep_id] = {
-        "uid": mid,
-        "amount": amount,
-        "status": "pending",
-        "md5": md5_hash,
-        "qr_str": qr_str,
-    }
-    _save(STORE_DEP_FILE, store_deps)
+    with DATA_LOCK:
+        store_deps[dep_id] = {
+            "uid": mid,
+            "amount": amount,
+            "status": "pending",
+            "md5": md5_hash,
+            "qr_str": qr_str,
+        }
+        _save(STORE_DEP_FILE, store_deps)
 
     try:
         admin_txt = (
@@ -830,20 +899,30 @@ def api_create_khqr():
 
 @flask_app.route("/api/check_khqr/<dep_id>", methods=["GET"])
 def api_check_khqr(dep_id):
-    dep = store_deps.get(dep_id)
-    if not dep:
-        return jsonify({"ok": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
+    with DATA_LOCK:
+        dep = store_deps.get(dep_id)
+        if not dep:
+            return jsonify({"ok": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
 
-    if dep.get("status") == "confirmed":
-        return jsonify({"ok": True, "status": "PAID", "balance": bal(dep["uid"])})
+        if dep.get("status") == "confirmed":
+            return jsonify({"ok": True, "status": "PAID", "balance": bal(dep["uid"])})
 
-    md5 = dep.get("md5", "")
+        md5 = dep.get("md5", "")
+
     if md5 and _check_bakong(md5):
-        mid = str(dep["uid"])
-        amount = round(float(dep["amount"]), 2)
-        add_bal(mid, amount)
-        dep["status"] = "confirmed"
-        _save(STORE_DEP_FILE, store_deps)
+        with DATA_LOCK:
+            dep = store_deps.get(dep_id)
+            if not dep:
+                return jsonify({"ok": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
+            if dep.get("status") == "confirmed":
+                return jsonify({"ok": True, "status": "PAID", "balance": bal(dep["uid"])})
+
+            mid = str(dep["uid"])
+            amount = round(float(dep["amount"]), 2)
+            add_bal(mid, amount)
+            dep["status"] = "confirmed"
+            _save(STORE_DEP_FILE, store_deps)
+            new_b = bal(mid)
 
         try:
             bot.send_message(
@@ -856,7 +935,7 @@ def api_check_khqr(dep_id):
         except Exception:
             pass
 
-        return jsonify({"ok": True, "status": "PAID", "balance": bal(mid)})
+        return jsonify({"ok": True, "status": "PAID", "balance": new_b})
 
     return jsonify({"ok": True, "status": "PENDING"})
 
