@@ -1,15 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-╔══════════════════════════════════════════════════════════════╗
-║     Kairozen Deposit Bot — カイロゼン                          ║
-║     User: 💳 ដាក់ប្រាក់ · Admin: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ   ║
-║     + Account Store API & Bakong KHQR Web Integration        ║
-║     Compatible: Python 3.10+ · Termux / Pydroid 3         ║
-╚══════════════════════════════════════════════════════════════╝
-ដំឡើង:
-  pip install pyTelegramBotAPI requests flask flask-cors qrcode pillow --break-system-packages
-"""
-
 import json, logging, time, threading, hashlib, io, os, sys, subprocess
 import requests as http_req
 import telebot
@@ -17,12 +6,11 @@ from telebot.types import (
     ReplyKeyboardMarkup,
     InlineKeyboardMarkup, InlineKeyboardButton
 )
-from flask import Flask, request as flask_request, jsonify
+from flask import Flask, request as flask_request, jsonify, send_from_directory
 from flask_cors import CORS
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ─── COLOR CONSTANTS FOR TERMINAL ───
 CLR_RESET   = "\033[0m"
 CLR_BOLD    = "\033[1m"
 CLR_RED     = "\033[91m"
@@ -32,7 +20,6 @@ CLR_BLUE    = "\033[94m"
 CLR_CYAN    = "\033[96m"
 CLR_WHITE   = "\033[97m"
 
-# Custom Colored Formatter for Logging
 class ColoredFormatter(logging.Formatter):
     FORMATS = {
         logging.DEBUG:    f"{CLR_CYAN}%(asctime)s{CLR_RESET} [{CLR_BLUE}%(levelname)s{CLR_RESET}] %(message)s",
@@ -47,30 +34,24 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
 
-# Setup Logging with Colors
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(ColoredFormatter())
 logger.addHandler(console_handler)
 
-# ─── Auto-install deps ───
 def _ensure_deps():
     pkgs = {"PIL": "pillow", "qrcode": "qrcode", "flask_cors": "flask-cors"}
     for mod, pkg in pkgs.items():
         try:
             __import__(mod)
         except ImportError:
-            logger.info(f"{CLR_YELLOW}Installing missing package: {pkg}...{CLR_RESET}")
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", pkg, "--break-system-packages", "-q"],
                 check=False
             )
 _ensure_deps()
 
-# ═══════════════════════════════════════════════════════════
-#  CONFIG  — ដូរតម្លៃទាំងនេះ
-# ═══════════════════════════════════════════════════════════
 BOT_TOKEN          = "9185336041:AAHyrGRDnIrSzT9tqDWKMZIGjqmVNU4X2HM"
 ADMIN_ID           = 8807182741
 
@@ -79,11 +60,8 @@ BANK_ACCOUNT       = "mon_samnang@bkrt"
 MERCHANT_NAME      = "KhmerSmm"
 MERCHANT_CITY      = "Phnom Penh"
 
-DEPOSIT_EXPIRE_SEC = 300   # 5 នាទី
+DEPOSIT_EXPIRE_SEC = 300
 
-# ═══════════════════════════════════════════════════════════
-#  FILES
-# ═══════════════════════════════════════════════════════════
 WALLETS_FILE   = "aio_wallets.json"
 USERS_FILE     = "aio_users.json"
 STORE_DEP_FILE = "aio_store_deposits.json"
@@ -584,7 +562,6 @@ def handle(message):
         bot.send_message(uid, "🏠 Menu", reply_markup=kb)
         return
 
-    # ─── ADMIN: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ ───
     if uid == ADMIN_ID:
         if text == "👥 អ្នកប្រើប្រាស់":
             if not users_db:
@@ -618,7 +595,6 @@ def handle(message):
         bot.send_message(uid, "👇 ជ្រើសប៊ូតុង <b>👥 អ្នកប្រើប្រាស់</b> ឬ <b>📊 ស្ថិតិ</b>", parse_mode="HTML", reply_markup=admin_kb())
         return
 
-    # ─── USER: 💳 ដាក់ប្រាក់ តែមួយគត់ ───
     if step == "dep_custom":
         try:
             amount = float(text.replace("$", ""))
@@ -643,11 +619,15 @@ def handle(message):
     bot.send_message(uid, "💳 ចុចប៊ូតុង <b>💳 ដាក់ប្រាក់</b> ខាងក្រោម", parse_mode="HTML", reply_markup=main_kb())
 
 # ═══════════════════════════════════════════════════════════
-#  FLASK WEB API — ភ្ជាប់ជាមួយវេបសាយលក់អាខោន
+#  FLASK WEB API & WEBSITE SERVE
 # ═══════════════════════════════════════════════════════════
 flask_app = Flask(__name__)
 CORS(flask_app)
 CONTROL_KEY = "kairozen_secret_2025"
+
+@flask_app.route("/")
+def serve_index():
+    return send_from_directory(".", "index.html")
 
 def _check_key():
     key = flask_request.args.get("key") or (flask_request.get_json(silent=True) or {}).get("key")
@@ -852,8 +832,9 @@ def api_check_khqr(dep_id):
     return jsonify({"ok": True, "status": "PENDING"})
 
 def run_flask():
-    logger.info(f"{CLR_CYAN}🌐 Control & Store API Server running on port 5055{CLR_RESET}")
-    flask_app.run(host="0.0.0.0", port=5055, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", 5055))
+    logger.info(f"{CLR_CYAN}🌐 Control & Store API Server running on port {port}{CLR_RESET}")
+    flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 def print_banner():
     banner = f"""
@@ -869,4 +850,5 @@ if __name__ == "__main__":
     print_banner()
     logger.info(f"{CLR_BOLD}{CLR_GREEN}🚀 Kairozen Deposit Bot កំពុងចាប់ផ្ដើម...{CLR_RESET}")
     threading.Thread(target=run_flask, daemon=True).start()
+    time.sleep(2)
     bot.infinity_polling(timeout=20, long_polling_timeout=15)
