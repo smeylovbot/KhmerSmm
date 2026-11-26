@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+"""
+╔══════════════════════════════════════════════════════════════╗
+║     Kairozen Deposit Bot — カイロゼン                          ║
+║     User: 💳 ដាក់ប្រាក់ · Admin: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ   ║
+║     + Account Store API & Bakong KHQR Web Integration        ║
+║     Compatible: Python 3.10+ · Termux / Pydroid 3 / Render   ║
+╚══════════════════════════════════════════════════════════════╝
+ដំឡើង:
+  pip install pyTelegramBotAPI requests flask flask-cors qrcode pillow bakong-khqr --break-system-packages
+"""
+
 import json, logging, time, threading, hashlib, io, os, sys, subprocess
 import requests as http_req
 import telebot
@@ -11,6 +22,7 @@ from flask_cors import CORS
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# ─── COLOR CONSTANTS FOR TERMINAL ───
 CLR_RESET   = "\033[0m"
 CLR_BOLD    = "\033[1m"
 CLR_RED     = "\033[91m"
@@ -20,6 +32,7 @@ CLR_BLUE    = "\033[94m"
 CLR_CYAN    = "\033[96m"
 CLR_WHITE   = "\033[97m"
 
+# Custom Colored Formatter for Logging
 class ColoredFormatter(logging.Formatter):
     FORMATS = {
         logging.DEBUG:    f"{CLR_CYAN}%(asctime)s{CLR_RESET} [{CLR_BLUE}%(levelname)s{CLR_RESET}] %(message)s",
@@ -34,24 +47,30 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
 
+# Setup Logging with Colors
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(ColoredFormatter())
 logger.addHandler(console_handler)
 
+# ─── Auto-install deps ───
 def _ensure_deps():
     pkgs = {"PIL": "pillow", "qrcode": "qrcode", "flask_cors": "flask-cors"}
     for mod, pkg in pkgs.items():
         try:
             __import__(mod)
         except ImportError:
+            logger.info(f"{CLR_YELLOW}Installing missing package: {pkg}...{CLR_RESET}")
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", pkg, "--break-system-packages", "-q"],
                 check=False
             )
 _ensure_deps()
 
+# ═══════════════════════════════════════════════════════════
+#  CONFIG  — ដូរតម្លៃទាំងនេះ
+# ═══════════════════════════════════════════════════════════
 BOT_TOKEN          = "9185336041:AAHyrGRDnIrSzT9tqDWKMZIGjqmVNU4X2HM"
 ADMIN_ID           = 8807182741
 
@@ -60,8 +79,11 @@ BANK_ACCOUNT       = "mon_samnang@bkrt"
 MERCHANT_NAME      = "KhmerSmm"
 MERCHANT_CITY      = "Phnom Penh"
 
-DEPOSIT_EXPIRE_SEC = 300
+DEPOSIT_EXPIRE_SEC = 300   # 5 នាទី
 
+# ═══════════════════════════════════════════════════════════
+#  FILES
+# ═══════════════════════════════════════════════════════════
 WALLETS_FILE   = "aio_wallets.json"
 USERS_FILE     = "aio_users.json"
 STORE_DEP_FILE = "aio_store_deposits.json"
@@ -562,6 +584,7 @@ def handle(message):
         bot.send_message(uid, "🏠 Menu", reply_markup=kb)
         return
 
+    # ─── ADMIN: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ ───
     if uid == ADMIN_ID:
         if text == "👥 អ្នកប្រើប្រាស់":
             if not users_db:
@@ -595,6 +618,7 @@ def handle(message):
         bot.send_message(uid, "👇 ជ្រើសប៊ូតុង <b>👥 អ្នកប្រើប្រាស់</b> ឬ <b>📊 ស្ថិតិ</b>", parse_mode="HTML", reply_markup=admin_kb())
         return
 
+    # ─── USER: 💳 ដាក់ប្រាក់ តែមួយគត់ ───
     if step == "dep_custom":
         try:
             amount = float(text.replace("$", ""))
