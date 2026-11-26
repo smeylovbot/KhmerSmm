@@ -6,8 +6,6 @@
 ║     + Account Store API & Bakong KHQR Web Integration        ║
 ║     Compatible: Python 3.10+ · Termux / Pydroid 3 / Render   ║
 ╚══════════════════════════════════════════════════════════════╝
-ដំឡើង:
-  pip install pyTelegramBotAPI requests flask flask-cors qrcode pillow bakong-khqr --break-system-packages
 """
 
 import json, logging, time, threading, hashlib, io, os, sys, subprocess
@@ -22,7 +20,6 @@ from flask_cors import CORS
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# ─── COLOR CONSTANTS FOR TERMINAL ───
 CLR_RESET   = "\033[0m"
 CLR_BOLD    = "\033[1m"
 CLR_RED     = "\033[91m"
@@ -32,7 +29,6 @@ CLR_BLUE    = "\033[94m"
 CLR_CYAN    = "\033[96m"
 CLR_WHITE   = "\033[97m"
 
-# Custom Colored Formatter for Logging
 class ColoredFormatter(logging.Formatter):
     FORMATS = {
         logging.DEBUG:    f"{CLR_CYAN}%(asctime)s{CLR_RESET} [{CLR_BLUE}%(levelname)s{CLR_RESET}] %(message)s",
@@ -47,14 +43,12 @@ class ColoredFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, datefmt="%Y-%m-%d %H:%M:%S")
         return formatter.format(record)
 
-# Setup Logging with Colors
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(ColoredFormatter())
 logger.addHandler(console_handler)
 
-# ─── Auto-install deps ───
 def _ensure_deps():
     pkgs = {"PIL": "pillow", "qrcode": "qrcode", "flask_cors": "flask-cors"}
     for mod, pkg in pkgs.items():
@@ -69,7 +63,7 @@ def _ensure_deps():
 _ensure_deps()
 
 # ═══════════════════════════════════════════════════════════
-#  CONFIG  — ដូរតម្លៃទាំងនេះ
+#  CONFIG
 # ═══════════════════════════════════════════════════════════
 BOT_TOKEN          = "9185336041:AAHyrGRDnIrSzT9tqDWKMZIGjqmVNU4X2HM"
 ADMIN_ID           = 8807182741
@@ -79,7 +73,7 @@ BANK_ACCOUNT       = "mon_samnang@bkrt"
 MERCHANT_NAME      = "KhmerSmm"
 MERCHANT_CITY      = "Phnom Penh"
 
-DEPOSIT_EXPIRE_SEC = 300   # 5 នាទី
+DEPOSIT_EXPIRE_SEC = 300
 
 # ═══════════════════════════════════════════════════════════
 #  FILES
@@ -239,6 +233,12 @@ def deposit_amt_kb():
     btns.append([InlineKeyboardButton("✏️ ផ្ទាល់ខ្លួន", callback_data="dep:custom")])
     return InlineKeyboardMarkup(btns)
 
+def _admin_deposit_kb(dep_id):
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ ដាក់ប្រាក់ឱ្យគេ", callback_data=f"manual_dep:approve:{dep_id}"),
+        InlineKeyboardButton("❌ កុំដាក់ប្រាក់ឱ្យគេ", callback_data=f"manual_dep:reject:{dep_id}")
+    ]])
+
 def _generate_khqr(uid, amount, note=""):
     try:
         from bakong_khqr import KHQR
@@ -279,10 +279,10 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
         md5 = dep.get("md5", "")
         if md5 and _check_bakong(md5):
             total_credit = round(amount, 2)
-            add_bal(uid, total_credit)
+            add_bal(uid_str, total_credit)
             store_deps[dep_id]["status"] = "confirmed"
             _save(STORE_DEP_FILE, store_deps)
-            new_b = bal(uid)
+            new_b = bal(uid_str)
 
             msg = (
                 f"✅ <b>ដាក់លុយបានជោគជ័យ!</b>\n"
@@ -290,10 +290,11 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
                 f"💰 បញ្ញើ: <b>${amount:.2f}</b>\n"
                 f"💳 សាច់ប្រាក់: <b>${new_b:.2f}</b>"
             )
-            try:
-                bot.send_message(uid, msg, parse_mode="HTML", reply_markup=main_kb())
-            except Exception:
-                pass
+            if uid is not None:
+                try:
+                    bot.send_message(uid, msg, parse_mode="HTML", reply_markup=main_kb())
+                except Exception:
+                    pass
             try:
                 bot.send_message(
                     ADMIN_ID,
@@ -302,7 +303,7 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
                 )
             except Exception:
                 pass
-            if sent_msg_id:
+            if uid is not None and sent_msg_id:
                 try:
                     bot.edit_message_caption(
                         chat_id=uid, message_id=sent_msg_id,
@@ -315,7 +316,7 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
 
         rem_sec = int(deadline - time.time())
         current_min = rem_sec // 60
-        if current_min != last_update_min and sent_msg_id and rem_sec > 0:
+        if uid is not None and current_min != last_update_min and sent_msg_id and rem_sec > 0:
             last_update_min = current_min
             mins_left = rem_sec // 60
             secs_left = rem_sec % 60
@@ -339,19 +340,20 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
     if dep and dep.get("status") == "pending":
         dep["status"] = "expired"
         _save(STORE_DEP_FILE, store_deps)
-        try:
-            bot.send_message(uid, "⏰ <b>QR ផុតកំណត់!</b> សូមចុច <b>💳 ដាក់ប្រាក់</b> ម្ដងទៀត", parse_mode="HTML", reply_markup=main_kb())
-        except Exception:
-            pass
-        if sent_msg_id:
+        if uid is not None:
             try:
-                bot.edit_message_caption(
-                    chat_id=uid, message_id=sent_msg_id,
-                    caption=f"💳 <b>ដាក់ប្រាក់ (ផុតកំណត់ ⏰)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
-                    parse_mode="HTML"
-                )
+                bot.send_message(uid, "⏰ <b>QR ផុតកំណត់!</b> សូមចុច <b>💳 ដាក់ប្រាក់</b> ម្ដងទៀត", parse_mode="HTML", reply_markup=main_kb())
             except Exception:
                 pass
+            if sent_msg_id:
+                try:
+                    bot.edit_message_caption(
+                        chat_id=uid, message_id=sent_msg_id,
+                        caption=f"💳 <b>ដាក់ប្រាក់ (ផុតកំណត់ ⏰)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
 
 def _send_deposit_qr(uid, amount):
     uid_str = str(uid)
@@ -393,11 +395,7 @@ def _send_deposit_qr(uid, amount):
             f"👤 User ID: <code>{uid_str}</code>\n"
             f"💰 ទឹកប្រាក់ស្នើ: <b>${amount:.2f}</b>"
         )
-        admin_deposit_kb = InlineKeyboardMarkup([[
-            InlineKeyboardButton("✅ ដាក់ប្រាក់ឱ្យគេ", callback_data=f"manual_dep:approve:{dep_id}"),
-            InlineKeyboardButton("❌ កុំដាក់ប្រាក់ឱ្យគេ", callback_data=f"manual_dep:reject:{dep_id}")
-        ]])
-        bot.send_message(ADMIN_ID, admin_txt, parse_mode="HTML", reply_markup=admin_deposit_kb)
+        bot.send_message(ADMIN_ID, admin_txt, parse_mode="HTML", reply_markup=_admin_deposit_kb(dep_id))
     except Exception as e:
         logger.error(f"{CLR_RED}[deposit] Admin notification error: {e}{CLR_RESET}")
 
@@ -533,11 +531,12 @@ def cb_manual_dep(call):
         add_bal(target_uid, total_credit)
         dep["status"] = "confirmed"
         _save(STORE_DEP_FILE, store_deps)
+        new_b = bal(target_uid)
         bot.answer_callback_query(call.id, "✅ បានដាក់ប្រាក់ឱ្យគេរួចរាល់!")
 
         try:
             bot.edit_message_text(
-                f"✅ <b>បានដាក់ប្រាក់ឱ្យគេរួចរាល់!</b>\n━━━━━━━━━━━━━━━━━━\n👤 User: <code>{target_uid}</code>\n💰 ចំនួន: <b>${total_credit:.2f}</b>",
+                f"✅ <b>បានដាក់ប្រាក់ឱ្យគេរួចរាល់!</b>\n━━━━━━━━━━━━━━━━━━\n👤 User: <code>{target_uid}</code>\n💰 ចំនួន: <b>${total_credit:.2f}</b>\n💳 សមតុល្យថ្មី: <b>${new_b:.2f}</b>",
                 chat_id=uid, message_id=call.message.message_id, parse_mode="HTML"
             )
         except Exception:
@@ -546,7 +545,7 @@ def cb_manual_dep(call):
             try:
                 bot.send_message(
                     int(target_uid),
-                    f"✅ <b>ដាក់លុយបានជោគជ័យ!</b>\n━━━━━━━━━━━━━━━━━━\n💰 បញ្ញើ: <b>${amount:.2f}</b>",
+                    f"✅ <b>ដាក់លុយបានជោគជ័យ!</b>\n━━━━━━━━━━━━━━━━━━\n💰 បញ្ញើ: <b>${amount:.2f}</b>\n💳 សាច់ប្រាក់: <b>${new_b:.2f}</b>",
                     parse_mode="HTML",
                     reply_markup=main_kb()
                 )
@@ -584,23 +583,25 @@ def handle(message):
         bot.send_message(uid, "🏠 Menu", reply_markup=kb)
         return
 
-    # ─── ADMIN: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ ───
     if uid == ADMIN_ID:
         if text == "👥 អ្នកប្រើប្រាស់":
-            if not users_db:
+            if not users_db and not wallets:
                 bot.send_message(uid, "❌ គ្មានអ្នកប្រើប្រាស់", parse_mode="HTML", reply_markup=admin_kb())
                 return
-            lines = ["<b>👥 អ្នកប្រើប្រាស់</b>\n━━━━━━━━━━━━━━━━━━"]
+            lines = ["<b>👥 អ្នកប្រើប្រាស់ & Member</b>\n━━━━━━━━━━━━━━━━━━"]
             for u_id, u_info in sorted(users_db.items(), key=lambda x: x[1].get("last", 0), reverse=True)[:30]:
                 name = u_info.get("name") or "?"
                 uname = f"@{u_info['username']}" if u_info.get("username") else ""
                 b = bal(u_id)
                 lines.append(f"👤 <b>{name}</b> {uname}\n🆔 <code>{u_id}</code> · 💰 <b>${b:.2f}</b>")
+            for m_id, m_bal in wallets.items():
+                if m_id not in users_db:
+                    lines.append(f"🌐 Member <code>{m_id}</code> · 💰 <b>${float(m_bal):.2f}</b>")
             bot.send_message(uid, "\n".join(lines)[:4000], parse_mode="HTML", reply_markup=admin_kb())
             return
 
         if text == "📊 ស្ថិតិ":
-            total_users = len(users_db)
+            total_users = max(len(users_db), len(wallets))
             total_deps  = sum(float(d.get("amount", 0)) for d in store_deps.values() if d.get("status") == "confirmed")
             total_bal   = sum(float(v) for v in wallets.values())
             bot.send_message(
@@ -618,7 +619,6 @@ def handle(message):
         bot.send_message(uid, "👇 ជ្រើសប៊ូតុង <b>👥 អ្នកប្រើប្រាស់</b> ឬ <b>📊 ស្ថិតិ</b>", parse_mode="HTML", reply_markup=admin_kb())
         return
 
-    # ─── USER: 💳 ដាក់ប្រាក់ តែមួយគត់ ───
     if step == "dep_custom":
         try:
             amount = float(text.replace("$", ""))
@@ -804,16 +804,21 @@ def api_create_khqr():
     _save(STORE_DEP_FILE, store_deps)
 
     try:
-        bot.send_message(
-            ADMIN_ID,
+        admin_txt = (
             f"🌐 <b>ការស្នើដាក់ប្រាក់ពីវេបសាយ!</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🆔 Member: <code>{mid}</code>\n"
-            f"💰 ចំនួន: <b>${amount:.2f}</b>",
-            parse_mode="HTML"
+            f"💰 ចំនួន: <b>${amount:.2f}</b>"
         )
-    except Exception:
-        pass
+        bot.send_message(ADMIN_ID, admin_txt, parse_mode="HTML", reply_markup=_admin_deposit_kb(dep_id))
+    except Exception as e:
+        logger.error(f"{CLR_RED}[api_create_khqr] Admin notification error: {e}{CLR_RESET}")
+
+    threading.Thread(
+        target=_watch_deposit,
+        args=(None, mid, dep_id, amount, None),
+        daemon=True
+    ).start()
 
     return jsonify({
         "ok": True,
