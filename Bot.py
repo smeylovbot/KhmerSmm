@@ -289,7 +289,6 @@ def _generate_khqr(uid, amount, note=""):
 def _check_bakong(md5):
     if not md5:
         return False
-    # 1) Try bakong-khqr SDK
     try:
         from bakong_khqr import KHQR as _BK
         k = _BK(BAKONG_TOKEN)
@@ -305,7 +304,6 @@ def _check_bakong(md5):
     except Exception as e:
         logger.warning(f"[Bakong SDK Error] {e}")
 
-    # 2) Direct Bakong Open API check_transaction_by_md5
     try:
         r = http.post(
             "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5",
@@ -710,6 +708,12 @@ CONTROL_KEY = "kairozen_secret_2025"
 def serve_index():
     return send_from_directory(".", "index.html")
 
+@flask_app.route("/<path:filename>")
+def serve_static_files(filename):
+    if os.path.isfile(filename):
+        return send_from_directory(".", filename)
+    return jsonify({"ok": False, "error": "Not found"}), 404
+
 def _check_key():
     key = flask_request.args.get("key") or (flask_request.get_json(silent=True) or {}).get("key")
     return key == CONTROL_KEY
@@ -788,7 +792,7 @@ def api_get_accounts():
                 "category": a.get("category", "ai"),
                 "desc": a["desc"]
             }
-            for a in accs if not a.get("sold", False)
+            for a in accs
         ]
     return jsonify({"ok": True, "accounts": available})
 
@@ -805,9 +809,9 @@ def api_buy_account():
 
     with DATA_LOCK:
         accs = _load(ACCOUNTS_FILE, default_accounts)
-        target_acc = next((a for a in accs if a["id"] == acc_id and not a.get("sold", False)), None)
+        target_acc = next((a for a in accs if a["id"] == acc_id), None)
         if not target_acc:
-            return jsonify({"ok": False, "error": "អីវ៉ាន់នេះត្រូវបានលក់រួចហើយ ឬអស់ពីស្តុក!"}), 400
+            return jsonify({"ok": False, "error": "រកមិនឃើញអីវ៉ាន់នេះទេ!"}), 400
 
         price = round(float(target_acc["price"]), 2)
         current_bal = bal(mid)
@@ -820,10 +824,6 @@ def api_buy_account():
 
         wallets[mid] = round(current_bal - price, 2)
         _save(WALLETS_FILE, wallets)
-
-        target_acc["sold"] = True
-        target_acc["buyer"] = mid
-        _save(ACCOUNTS_FILE, accs)
 
         record_order(mid, target_acc)
         new_b = bal(mid)
