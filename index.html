@@ -309,9 +309,32 @@
       `).join("");
     }
 
+    async function checkPendingSavedDeposit() {
+      try {
+        const raw = localStorage.getItem("kz_pending_dep");
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved || !saved.dep_id || saved.uid !== memberId) return;
+        if (Date.now() - Number(saved.created_at || 0) > 600000) {
+          localStorage.removeItem("kz_pending_dep");
+          return;
+        }
+        const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(saved.dep_id)}`, { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok && data.status === "PAID") {
+            balance = parseFloat(data.balance);
+            localStorage.removeItem("kz_pending_dep");
+            updateHeaderUI();
+          }
+        }
+      } catch (_) {}
+    }
+
     async function syncBackend() {
       myOrders = loadLocalOrders(memberId);
       updateHeaderUI();
+      await checkPendingSavedDeposit();
       try {
         const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(3000) });
         if (accRes.ok) {
@@ -469,6 +492,15 @@
 
     async function checkPaymentOnceNow() {
       if (!currentDepId) {
+        const raw = localStorage.getItem("kz_pending_dep");
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.dep_id) currentDepId = parsed.dep_id;
+          } catch (_) {}
+        }
+      }
+      if (!currentDepId) {
         await syncBackend();
         return;
       }
@@ -479,6 +511,7 @@
         if (data.ok && data.status === "PAID") {
           clearInterval(pollInterval);
           clearInterval(qrInterval);
+          localStorage.removeItem("kz_pending_dep");
           balance = parseFloat(data.balance);
           updateHeaderUI();
           document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បង់ប្រាក់ជោគជ័យ! បូកលុយស្វ័យប្រវត្តិរួចរាល់</span>`;
@@ -501,13 +534,14 @@
           if (data.ok && data.status === "PAID") {
             clearInterval(pollInterval);
             clearInterval(qrInterval);
+            localStorage.removeItem("kz_pending_dep");
             balance = parseFloat(data.balance);
             updateHeaderUI();
             document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បង់ប្រាក់ជោគជ័យ! បូកលុយស្វ័យប្រវត្តិរួចរាល់</span>`;
             setTimeout(() => closeTopupModal(), 1000);
           }
         } catch (_) {}
-      }, 3500);
+      }, 3000);
     }
 
     async function generateQR() {
@@ -534,6 +568,12 @@
         if (data.ok && data.qr_str) {
           payload = data.qr_str;
           currentDepId = data.dep_id;
+          localStorage.setItem("kz_pending_dep", JSON.stringify({
+            dep_id: data.dep_id,
+            uid: memberId,
+            amount: amt,
+            created_at: Date.now()
+          }));
           document.getElementById("qr-status-msg").innerText = "🔄 កំពុងរង់ចាំការទូទាត់ស្វ័យប្រវត្តិ (Auto)...";
           startPaymentPolling();
         } else {
