@@ -27,12 +27,15 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2.5 sm:gap-3">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <div class="flex items-center gap-2.5 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800">
           <span class="text-xs text-slate-400">🆔 <b id="u-id" class="text-slate-200">KZ-1001</b></span>
           <span class="text-slate-700">|</span>
           <span class="text-sm text-emerald-400 font-bold">💰 $<span id="u-bal">0.00</span></span>
         </div>
+        <button onclick="openMyOrdersModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition">
+          📦 អីវ៉ាន់របស់ខ្ញុំ (<span id="my-orders-count">0</span>)
+        </button>
         <button onclick="openTopupModal()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 py-2 rounded-xl text-sm font-bold transition shadow-lg shadow-cyan-500/20">
           + ដាក់ប្រាក់
         </button>
@@ -47,7 +50,7 @@
   <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-7 flex-1">
     <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-slate-900 border border-cyan-800/40 rounded-2xl p-6 mb-7">
       <h2 class="text-xl sm:text-2xl font-bold mb-1.5 text-white">ទិញអាខោន Premium ដោយស្វ័យប្រវត្តិ 24/7</h2>
-      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin ជាអ្នកបញ្ជាក់បូកលុយចូលគណនី) រួចទិញអាខោនភ្លាមៗ។</p>
+      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin ជាអ្នកបញ្ជាក់បូកលុយចូលគណនី) រួចទិញអីវ៉ាន់ភ្លាមៗ និងរក្សាទុកក្នុង «អីវ៉ាន់របស់ខ្ញុំ» មិនបាត់ឡើយ។</p>
     </div>
 
     <!-- Filter Buttons -->
@@ -67,12 +70,24 @@
   <div id="member-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6">
       <h3 class="text-lg font-bold mb-1.5">លេខកូដគណនីសមាជិក</h3>
-      <p class="text-xs text-slate-400 mb-4">បញ្ចូលលេខកូដគណនីរបស់អ្នក ដើម្បីរក្សាទុកសមតុល្យទឹកប្រាក់ និងប្រវត្តិទិញ។</p>
+      <p class="text-xs text-slate-400 mb-4">បញ្ចូលលេខកូដគណនីរបស់អ្នក ដើម្បីមើលសមតុល្យ និងអីវ៉ាន់ដែលអ្នកបានទិញ។</p>
       <input type="text" id="member-input" placeholder="ឧទាហរណ៍: KZ-1001" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white mb-4 focus:outline-none focus:border-cyan-500">
       <div class="flex justify-end gap-2">
         <button onclick="closeMemberModal()" class="px-4 py-2 text-sm text-slate-400 hover:text-white">បោះបង់</button>
         <button onclick="saveMember()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-2 rounded-xl text-sm font-bold">រក្សាទុក</button>
       </div>
+    </div>
+  </div>
+
+  <!-- My Orders Modal (Private per Member ID) -->
+  <div id="orders-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 my-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-white">📦 អីវ៉ាន់របស់ខ្ញុំ (<span id="orders-modal-uid" class="text-cyan-400">KZ-1001</span>)</h3>
+        <button onclick="closeMyOrdersModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">បង្ហាញតែអីវ៉ាន់ដែលគណនីរបស់អ្នកបានទិញប៉ុណ្ណោះ (អ្នកផ្សេងមិនអាចឃើញបានទេ)។</p>
+      <div id="orders-list-box" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
     </div>
   </div>
 
@@ -85,7 +100,6 @@
       </div>
       <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-1001</b> (សមតុល្យនឹងត្រូវបញ្ជាក់បូកចូលដោយ Admin)។</p>
 
-      <!-- Preset Amounts -->
       <div class="grid grid-cols-4 gap-2 mb-3">
         <button onclick="selectAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
         <button onclick="selectAmount(5)" class="preset-amt bg-cyan-500/20 border border-cyan-500 text-cyan-300 py-2 rounded-xl text-xs font-bold transition">$5.00</button>
@@ -93,13 +107,11 @@
         <button onclick="selectAmount(20)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$20.00</button>
       </div>
 
-      <!-- Custom Amount Input -->
       <div class="flex gap-2 mb-4">
         <input type="number" id="topup-amount" step="0.01" min="0.10" value="5.00" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500" placeholder="ចំនួន $ (ចាប់ពី 0.10)">
         <button onclick="generateQR()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold transition">បង្កើត QR</button>
       </div>
 
-      <!-- Real Bakong KHQR Card -->
       <div class="khqr-card max-w-[270px] mx-auto mb-4">
         <div class="khqr-header">
           <span class="text-sm tracking-wider">KHQR</span>
@@ -114,7 +126,6 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
       <div class="grid grid-cols-2 gap-2.5">
         <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
           ⬇️ រក្សាទុក QR
@@ -130,8 +141,8 @@
   <div id="result-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl max-w-md w-full p-6 text-center">
       <div class="text-4xl mb-2">🎉</div>
-      <h3 class="text-lg font-bold text-emerald-400 mb-1.5">ទិញអាខោនបានជោគជ័យ!</h3>
-      <p class="text-xs text-slate-400 mb-3">ចម្លងព័ត៌មានអាខោនរបស់អ្នកទុកប្រើប្រាស់៖</p>
+      <h3 class="text-lg font-bold text-emerald-400 mb-1.5">ទិញអីវ៉ាន់បានជោគជ័យ!</h3>
+      <p class="text-xs text-slate-400 mb-3">អីវ៉ាន់ត្រូវបានរក្សាទុកក្នុង «អីវ៉ាន់របស់ខ្ញុំ» រួចរាល់ (មិនបាត់ឡើយ)៖</p>
       <div id="acc-secret" class="bg-slate-950 border border-slate-800 p-3.5 rounded-xl font-mono text-xs sm:text-sm text-cyan-300 select-all mb-4 break-all"></div>
       <button onclick="closeResultModal()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl text-sm font-bold transition">រួចរាល់</button>
     </div>
@@ -164,27 +175,50 @@
     };
 
     const DEMO_ACCOUNTS = [
-      { id: "acc_chatgpt_pro_1", key: "chatgpt_pro", title: "ChatGPT Pro", price: 10.00, duration: "1ខែ", category: "ai", desc: "គណនី ChatGPT Pro កម្រិតខ្ពស់ សម្រាប់ការងារ AI និង Coding រហ័សរលូន។", data: "Email: chatgpt.pro01@mail.com | Pass: ProPass#2026" },
-      { id: "acc_surfshark_1", key: "surfshark_vpn", title: "VPN Surfshark", price: 8.99, duration: "1ខែ", category: "vpn", desc: "ការពារភាពឯកជន លឿនលឿន ប្តូរ Server បានច្រើនប្រទេសដោយគ្មានដែនកំណត់។", data: "Email: surfshark01@mail.com | Pass: VpnSafe#2026" },
-      { id: "acc_super_grok_1", key: "super_grok", title: "Supper Grok", price: 10.00, duration: "1ខែ", category: "ai", desc: "មុខងារ AI ឆ្លើយតបរហ័ស វិភាគទិន្នន័យ និងបង្កើតមាតិកាពេញលេញ។", data: "Email: supergrok01@mail.com | Pass: GrokAI#2026" },
-      { id: "acc_yt_premium_1", key: "youtube_premium", title: "YouTube Premium", price: 3.00, duration: "1ខែ", category: "media", desc: "មើលវីដេអូគ្មានការរំខានដោយផ្សាយពាណិជ្ជកម្ម និងចាក់ Background បាន។", data: "Email: ytprem01@mail.com | Pass: MediaTube#2026" },
-      { id: "acc_canva_pro_1", key: "canva_pro", title: "Canva Pro", price: 12.99, duration: "1ខែ", category: "design", desc: "រចនាក្រាហ្វិក Template Pro, Background Remover និង Font ពេញលេញ។", data: "Email: canvapros01@mail.com | Pass: DesignPro#2026" },
-      { id: "acc_gemini_pro_18", key: "gemini_pro", title: "Gemini Pro", price: 5.00, duration: "18ខែ", category: "ai", desc: "ប្រើប្រាស់ Gemini Pro រយៈពេល 18 ខែពេញ ជំនួយការ AI ដ៏មានថាមពល។", data: "Email: geminipro01@mail.com | Pass: Gemini18M#2026" },
-      { id: "acc_capcut_pro_1", key: "capcut_pro", title: "CapCut Pro", price: 3.99, duration: "1ខែ", category: "design", desc: "កាត់តវីដេអូប្រើ Effect, Transitions និង Export គុណភាពខ្ពស់គ្មាន Watermark។", data: "Email: capcutpro01@mail.com | Pass: CapEdit#2026" }
+      { id: "acc_chatgpt_pro_1", key: "chatgpt_pro", title: "ChatGPT Pro", price: 10.00, duration: "1ខែ", category: "ai", desc: "គណនី ChatGPT Pro កម្រិតខ្ពស់ សម្រាប់ការងារ AI និង Coding រហ័សរលូន។" },
+      { id: "acc_surfshark_1", key: "surfshark_vpn", title: "VPN Surfshark", price: 8.99, duration: "1ខែ", category: "vpn", desc: "ការពារភាពឯកជន លឿនលឿន ប្តូរ Server បានច្រើនប្រទេសដោយគ្មានដែនកំណត់។" },
+      { id: "acc_super_grok_1", key: "super_grok", title: "Supper Grok", price: 10.00, duration: "1ខែ", category: "ai", desc: "មុខងារ AI ឆ្លើយតបរហ័ស វិភាគទិន្នន័យ និងបង្កើតមាតិកាពេញលេញ។" },
+      { id: "acc_yt_premium_1", key: "youtube_premium", title: "YouTube Premium", price: 3.00, duration: "1ខែ", category: "media", desc: "មើលវីដេអូគ្មានការរំខានដោយផ្សាយពាណិជ្ជកម្ម និងចាក់ Background បាន។" },
+      { id: "acc_canva_pro_1", key: "canva_pro", title: "Canva Pro", price: 12.99, duration: "1ខែ", category: "design", desc: "រចនាក្រាហ្វិក Template Pro, Background Remover និង Font ពេញលេញ។" },
+      { id: "acc_gemini_pro_18", key: "gemini_pro", title: "Gemini Pro", price: 5.00, duration: "18ខែ", category: "ai", desc: "ប្រើប្រាស់ Gemini Pro រយៈពេល 18 ខែពេញ ជំនួយការ AI ដ៏មានថាមពល។" },
+      { id: "acc_capcut_pro_1", key: "capcut_pro", title: "CapCut Pro", price: 3.99, duration: "1ខែ", category: "design", desc: "កាត់តវីដេអូប្រើ Effect, Transitions និង Export គុណភាពខ្ពស់គ្មាន Watermark។" }
     ];
 
     let allAccounts = [...DEMO_ACCOUNTS];
+    let myOrders = [];
     let currentCategory = "all";
     let memberId = localStorage.getItem("kz_member_id") || DEFAULT_MEMBER;
     let balance = 0.00;
     let currentDepId = null;
     let qrInterval = null;
     let pollInterval = null;
+    let buyingInProgress = false;
+
+    function getOrdersStorageKey(uid) {
+      return `kz_orders_${uid}`;
+    }
+
+    function loadLocalOrders(uid) {
+      try {
+        const raw = localStorage.getItem(getOrdersStorageKey(uid));
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveLocalOrders(uid, list) {
+      try {
+        localStorage.setItem(getOrdersStorageKey(uid), JSON.stringify(list));
+      } catch (_) {}
+    }
 
     function updateHeaderUI() {
       document.getElementById("u-id").innerText = memberId;
       document.getElementById("u-bal").innerText = balance.toFixed(2);
       document.getElementById("topup-member-label").innerText = memberId;
+      document.getElementById("orders-modal-uid").innerText = memberId;
+      document.getElementById("my-orders-count").innerText = myOrders.length;
       localStorage.setItem("kz_member_id", memberId);
     }
 
@@ -207,7 +241,7 @@
         : allAccounts.filter(a => a.category === currentCategory);
 
       if (!list.length) {
-        grid.innerHTML = `<div class="col-span-full text-center text-slate-400 py-10">មិនមានអាខោនក្នុងប្រភេទនេះទេ។</div>`;
+        grid.innerHTML = `<div class="col-span-full text-center text-slate-400 py-10">មិនមានអីវ៉ាន់ក្នុងប្រភេទនេះទេ។</div>`;
         return;
       }
 
@@ -229,7 +263,27 @@
       `).join("");
     }
 
+    function renderMyOrders() {
+      const box = document.getElementById("orders-list-box");
+      if (!myOrders.length) {
+        box.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">អ្នកមិនទាន់មានអីវ៉ាន់ដែលបានទិញសម្រាប់គណនី <b class="text-cyan-400">${memberId}</b> នៅឡើយទេ។</div>`;
+        return;
+      }
+      box.innerHTML = myOrders.map(ord => `
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="font-bold text-sm text-white">${ord.title} (${ord.duration || "1ខែ"})</span>
+            <span class="text-xs font-bold text-emerald-400">$${Number(ord.price || 0).toFixed(2)}</span>
+          </div>
+          <div class="text-[11px] text-slate-400 mb-2">🧾 ${ord.order_id || ""} · 🕒 ${ord.purchased_at || ""}</div>
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 font-mono text-xs text-cyan-300 select-all break-all">${ord.account_data}</div>
+        </div>
+      `).join("");
+    }
+
     async function syncBackend() {
+      myOrders = loadLocalOrders(memberId);
+      updateHeaderUI();
       try {
         const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(3000) });
         if (accRes.ok) {
@@ -247,6 +301,10 @@
           const userData = await userRes.json();
           if (userData.ok) {
             balance = parseFloat(userData.balance || 0);
+            if (Array.isArray(userData.orders) && userData.orders.length > 0) {
+              myOrders = userData.orders;
+              saveLocalOrders(memberId, myOrders);
+            }
             updateHeaderUI();
           }
         }
@@ -260,6 +318,7 @@
     }
 
     async function buyAccount(accId) {
+      if (buyingInProgress) return;
       const acc = allAccounts.find(a => a.id === accId);
       if (!acc) return;
       const price = parseFloat(acc.price);
@@ -272,25 +331,39 @@
 
       if (!confirm(`តើអ្នកចង់ទិញ "${acc.title}" (${acc.duration}) ក្នុងតម្លៃ $${price.toFixed(2)} មែនទេ?`)) return;
 
+      buyingInProgress = true;
       try {
         const res = await fetch(`${API_URL}/api/buy`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: memberId, acc_id: acc.id }),
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(4000)
         });
         const data = await res.json();
         if (data.ok) {
           balance = parseFloat(data.new_balance);
+          const orderEntry = {
+            order_id: `ORD-${Date.now()}`,
+            title: acc.title,
+            duration: acc.duration,
+            price: price,
+            account_data: data.account_data,
+            purchased_at: new Date().toLocaleString()
+          };
+          myOrders.unshift(orderEntry);
+          saveLocalOrders(memberId, myOrders);
           updateHeaderUI();
           allAccounts = allAccounts.filter(item => item.id !== acc.id);
           renderAccounts();
           showResultModal(data.account_data);
         } else {
           alert("❌ " + (data.error || "មិនអាចទិញបានទេ"));
+          await syncBackend();
         }
       } catch (_) {
-        alert("⚠️ មិនអាចភ្ជាប់ទៅ Server បានទេ! សូមព្យាយាមម្តងទៀត។");
+        alert("⚠️ មិនអាចភ្ជាប់ទៅ Server បានទេ! សូមព្យាយាមម្តងទៀត (មិនមានការកាត់លុយទេ)។");
+      } finally {
+        buyingInProgress = false;
       }
     }
 
@@ -486,10 +559,25 @@
       modal.classList.remove("flex");
     }
 
+    function openMyOrdersModal() {
+      renderMyOrders();
+      const modal = document.getElementById("orders-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeMyOrdersModal() {
+      const modal = document.getElementById("orders-modal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
     function saveMember() {
       const val = document.getElementById("member-input").value.trim();
       if (!val) return;
       memberId = val;
+      balance = 0.00;
+      myOrders = loadLocalOrders(memberId);
       updateHeaderUI();
       closeMemberModal();
       syncBackend();
@@ -508,6 +596,7 @@
       modal.classList.remove("flex");
     }
 
+    myOrders = loadLocalOrders(memberId);
     updateHeaderUI();
     renderAccounts();
     syncBackend();
