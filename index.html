@@ -110,41 +110,44 @@
         <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ស្វ័យប្រវត្តិ (Auto KHQR)</h3>
         <button onclick="closeTopupModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR — បន្ទាប់ពីស្កេនបង់រួច ប្រព័ន្ធនឹងបូកលុយចូលគណនី <b id="topup-member-label" class="text-cyan-400">KZ-......</b> ដោយស្វ័យប្រវត្តិ។</p>
+      <p class="text-xs text-slate-400 mb-4">កំណត់ចំនួនទឹកប្រាក់ (USD) រួចចុច <b class="text-cyan-300">បង្កើត QR</b> ដើម្បីទទួល Bakong KHQR សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-......</b>។</p>
 
       <div class="grid grid-cols-4 gap-2 mb-3">
-        <button onclick="selectAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
-        <button onclick="selectAmount(5)" class="preset-amt bg-cyan-500/20 border border-cyan-500 text-cyan-300 py-2 rounded-xl text-xs font-bold transition">$5.00</button>
-        <button onclick="selectAmount(10)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$10.00</button>
-        <button onclick="selectAmount(20)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$20.00</button>
+        <button onclick="selectPresetAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
+        <button onclick="selectPresetAmount(5)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$5.00</button>
+        <button onclick="selectPresetAmount(10)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$10.00</button>
+        <button onclick="selectPresetAmount(20)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$20.00</button>
       </div>
 
       <div class="flex gap-2 mb-4">
-        <input type="number" id="topup-amount" step="0.01" min="0.10" value="5.00" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500" placeholder="ចំនួន $ (ចាប់ពី 0.10)">
+        <input type="number" id="topup-amount" step="0.01" min="0.10" placeholder="បញ្ចូលចំនួន $ (ចាប់ពី 0.10)" oninput="clearPresetSelection()" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         <button onclick="generateQR()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold transition">បង្កើត QR</button>
       </div>
 
-      <div class="khqr-card max-w-[270px] mx-auto mb-4">
-        <div class="khqr-header">
-          <span class="text-sm tracking-wider">KHQR</span>
-          <span class="text-[11px] bg-white/20 px-2 py-0.5 rounded">USD</span>
+      <!-- Hidden until user sets amount and clicks បង្កើត QR -->
+      <div id="qr-result-section" class="hidden">
+        <div class="khqr-card max-w-[270px] mx-auto mb-4">
+          <div class="khqr-header">
+            <span class="text-sm tracking-wider">KHQR</span>
+            <span class="text-[11px] bg-white/20 px-2 py-0.5 rounded">USD</span>
+          </div>
+          <div class="p-4 text-center">
+            <div class="text-xs font-bold text-gray-800">KhmerSmm</div>
+            <div id="qr-amt-display" class="text-xl font-extrabold text-gray-900 mt-0.5">$0.00</div>
+            <div class="text-[11px] text-gray-500 mb-3">⏱ ផុតកំណត់ក្នុង <span id="qr-timer" class="font-bold text-rose-600">05:00</span></div>
+            <div id="qr-canvas-box" class="flex items-center justify-center min-h-[176px]"></div>
+            <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">🔄 កំពុងរង់ចាំការទូទាត់ស្វ័យប្រវត្តិ (Auto)...</div>
+          </div>
         </div>
-        <div class="p-4 text-center">
-          <div class="text-xs font-bold text-gray-800">KhmerSmm</div>
-          <div id="qr-amt-display" class="text-xl font-extrabold text-gray-900 mt-0.5">$5.00</div>
-          <div class="text-[11px] text-gray-500 mb-3">⏱ ផុតកំណត់ក្នុង <span id="qr-timer" class="font-bold text-rose-600">05:00</span></div>
-          <div id="qr-canvas-box" class="flex items-center justify-center min-h-[176px]"></div>
-          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">🔄 កំពុងរង់ចាំការទូទាត់ស្វ័យប្រវត្តិ (Auto)...</div>
-        </div>
-      </div>
 
-      <div class="grid grid-cols-2 gap-2.5">
-        <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
-          ⬇️ រក្សាទុក QR
-        </button>
-        <button onclick="checkPaymentOnceNow()" class="bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 py-2.5 rounded-xl text-xs font-bold transition">
-          ⚡ ឆែកការបង់ប្រាក់ឥឡូវ
-        </button>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
+            ⬇️ រក្សាទុក QR
+          </button>
+          <button onclick="checkPaymentOnceNow()" class="bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 py-2.5 rounded-xl text-xs font-bold transition">
+            ⚡ ឆែកការបង់ប្រាក់ឥឡូវ
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -547,10 +550,12 @@
     async function generateQR() {
       const rawVal = parseFloat(document.getElementById("topup-amount").value);
       if (isNaN(rawVal) || rawVal < 0.10) {
-        alert("សូមបញ្ចូលចំនួនទឹកប្រាក់ចាប់ពី $0.10 ឡើងទៅ!");
+        alert("សូមកំណត់ចំនួនទឹកប្រាក់ចាប់ពី $0.10 ឡើងទៅជាមុនសិន!");
         return;
       }
       const amt = Math.round(rawVal * 100) / 100;
+
+      document.getElementById("qr-result-section").classList.remove("hidden");
       document.getElementById("qr-amt-display").innerText = `$${amt.toFixed(2)}`;
       document.getElementById("qr-status-msg").innerText = "កំពុងបង្កើត Bakong KHQR...";
 
@@ -587,7 +592,7 @@
       startCountdown();
     }
 
-    function selectAmount(amt) {
+    function selectPresetAmount(amt) {
       document.getElementById("topup-amount").value = Number(amt).toFixed(2);
       document.querySelectorAll(".preset-amt").forEach(btn => {
         const active = parseFloat(btn.innerText.replace("$", "")) === Number(amt);
@@ -595,7 +600,12 @@
           ? "preset-amt bg-cyan-500/20 border border-cyan-500 text-cyan-300 py-2 rounded-xl text-xs font-bold transition"
           : "preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition";
       });
-      generateQR();
+    }
+
+    function clearPresetSelection() {
+      document.querySelectorAll(".preset-amt").forEach(btn => {
+        btn.className = "preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition";
+      });
     }
 
     function downloadQR() {
@@ -614,14 +624,21 @@
     }
 
     function openTopupModal(minAmt) {
+      clearInterval(qrInterval);
+      clearInterval(pollInterval);
+      document.getElementById("qr-result-section").classList.add("hidden");
+      clearPresetSelection();
+
       if (minAmt && minAmt > 0) {
         document.getElementById("topup-amount").value = Number(minAmt).toFixed(2);
+      } else {
+        document.getElementById("topup-amount").value = "";
       }
+
       document.getElementById("topup-member-label").innerText = memberId;
       const modal = document.getElementById("topup-modal");
       modal.classList.remove("hidden");
       modal.classList.add("flex");
-      generateQR();
     }
 
     function closeTopupModal() {
