@@ -23,7 +23,7 @@
         <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-xl">⚡</div>
         <div>
           <h1 class="text-lg sm:text-xl font-bold text-white leading-none">Kairozen Store</h1>
-          <span class="text-[11px] text-cyan-400">សេវាកម្មអាខោនស្វ័យប្រវត្តិ 24/7</span>
+          <span class="text-[11px] text-cyan-400">Auto Payment Bakong KHQR · 24/7</span>
         </div>
       </div>
 
@@ -54,7 +54,7 @@
   <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-7 flex-1">
     <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-slate-900 border border-cyan-800/40 rounded-2xl p-6 mb-7">
       <h2 class="text-xl sm:text-2xl font-bold mb-1.5 text-white">ទិញអាខោន Premium ដោយស្វ័យប្រវត្តិ 24/7</h2>
-      <p class="text-slate-300 text-sm">ភ្ញៀវម្នាក់ៗទទួលបានលេខកូដសមាជិកផ្ទាល់ខ្លួនមិនដូចគ្នា ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin បញ្ជាក់បូកលុយ) រួចទិញអីវ៉ាន់ភ្លាមៗ។</p>
+      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីដាក់ប្រាក់ស្វ័យប្រវត្តិ (Auto Payment) រួចទិញអីវ៉ាន់ភ្លាមៗ និងរក្សាទុកក្នុង «អីវ៉ាន់របស់ខ្ញុំ» មិនបាត់ឡើយ។</p>
     </div>
 
     <!-- Filter Buttons -->
@@ -70,11 +70,11 @@
     <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
   </main>
 
-  <!-- Member Modal (Unique Non-Duplicate Member Code, Anti-Spoof) -->
+  <!-- Member Modal -->
   <div id="member-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6">
       <h3 class="text-lg font-bold mb-1.5">លេខកូដគណនីសមាជិកផ្ទាល់ខ្លួន</h3>
-      <p class="text-xs text-slate-400 mb-4">លេខកូដនេះត្រូវបានបង្កើតដោយស្វ័យប្រវត្តិមិនឱ្យដូចគ្នា និងការពារការបន្លំគណនីអ្នកដទៃ (មិនអាចវាយលេខកូដផ្សេងដោយសេរីបានទេ)។</p>
+      <p class="text-xs text-slate-400 mb-4">លេខកូដនេះត្រូវបានបង្កើតដោយស្វ័យប្រវត្តិមិនឱ្យដូចគ្នា និងការពារការបន្លំគណនីអ្នកដទៃ។</p>
       <div class="flex gap-2 mb-4">
         <input type="text" id="member-input" readonly class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-cyan-300 font-mono font-bold focus:outline-none select-all">
         <button onclick="copyMemberCode()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition">ចម្លង</button>
@@ -91,7 +91,7 @@
     </div>
   </div>
 
-  <!-- My Orders Modal (Private per Member ID) -->
+  <!-- My Orders Modal -->
   <div id="orders-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 my-auto">
       <div class="flex items-center justify-between mb-3">
@@ -103,14 +103,14 @@
     </div>
   </div>
 
-  <!-- Top-Up Modal with Real KHQR (Admin Approval Only) -->
+  <!-- Top-Up Modal with Bakong KHQR Auto Payment -->
   <div id="topup-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 sm:p-6 my-auto">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ចូលគណនី (KHQR)</h3>
+        <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ស្វ័យប្រវត្តិ (Auto KHQR)</h3>
         <button onclick="closeTopupModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-......</b> (សមតុល្យនឹងត្រូវបញ្ជាក់បូកចូលដោយ Admin)។</p>
+      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR — បន្ទាប់ពីស្កេនបង់រួច ប្រព័ន្ធនឹងបូកលុយចូលគណនី <b id="topup-member-label" class="text-cyan-400">KZ-......</b> ដោយស្វ័យប្រវត្តិ។</p>
 
       <div class="grid grid-cols-4 gap-2 mb-3">
         <button onclick="selectAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
@@ -134,7 +134,7 @@
           <div id="qr-amt-display" class="text-xl font-extrabold text-gray-900 mt-0.5">$5.00</div>
           <div class="text-[11px] text-gray-500 mb-3">⏱ ផុតកំណត់ក្នុង <span id="qr-timer" class="font-bold text-rose-600">05:00</span></div>
           <div id="qr-canvas-box" class="flex items-center justify-center min-h-[176px]"></div>
-          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">ស្កេនរួចរង់ចាំ Admin បញ្ជាក់ដាក់ប្រាក់</div>
+          <div id="qr-status-msg" class="text-[11px] text-gray-500 mt-3">🔄 កំពុងរង់ចាំការទូទាត់ស្វ័យប្រវត្តិ (Auto)...</div>
         </div>
       </div>
 
@@ -142,8 +142,8 @@
         <button onclick="downloadQR()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">
           ⬇️ រក្សាទុក QR
         </button>
-        <button onclick="checkBalanceNow()" class="bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 py-2.5 rounded-xl text-xs font-bold transition">
-          🔄 ពិនិត្យសមតុល្យ
+        <button onclick="checkPaymentOnceNow()" class="bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 py-2.5 rounded-xl text-xs font-bold transition">
+          ⚡ ឆែកការបង់ប្រាក់ឥឡូវ
         </button>
       </div>
     </div>
@@ -339,12 +339,6 @@
       } catch (_) {}
     }
 
-    async function checkBalanceNow() {
-      document.getElementById("qr-status-msg").innerText = "កំពុងពិនិត្យសមតុល្យពី Server...";
-      await syncBackend();
-      document.getElementById("qr-status-msg").innerText = `សមតុល្យបច្ចុប្បន្ន: $${balance.toFixed(2)}`;
-    }
-
     async function buyAccount(accId) {
       if (buyingInProgress) return;
       const acc = allAccounts.find(a => a.id === accId);
@@ -352,7 +346,7 @@
       const price = parseFloat(acc.price);
 
       if (balance < price) {
-        alert(`❌ ទឹកប្រាក់មិនគ្រប់គ្រាន់!\nអ្នកមាន $${balance.toFixed(2)} តែត្រូវការ $${price.toFixed(2)}។\nសូមចុច "+ ដាក់ប្រាក់" ដើម្បីស្កេន KHQR និងរង់ចាំ Admin បញ្ជាក់បូកលុយជាមុនសិន។`);
+        alert(`❌ ទឹកប្រាក់មិនគ្រប់គ្រាន់!\nអ្នកមាន $${balance.toFixed(2)} តែត្រូវការ $${price.toFixed(2)}។\nសូមចុច "+ ដាក់ប្រាក់" ដើម្បីស្កេន Bakong KHQR (Auto Payment)។`);
         openTopupModal(price);
         return;
       }
@@ -473,23 +467,47 @@
       qrInterval = setInterval(updateClock, 1000);
     }
 
+    async function checkPaymentOnceNow() {
+      if (!currentDepId) {
+        await syncBackend();
+        return;
+      }
+      document.getElementById("qr-status-msg").innerText = "⚡ កំពុងឆែកជាមួយ Bakong...";
+      try {
+        const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(4000) });
+        const data = await res.json();
+        if (data.ok && data.status === "PAID") {
+          clearInterval(pollInterval);
+          clearInterval(qrInterval);
+          balance = parseFloat(data.balance);
+          updateHeaderUI();
+          document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បង់ប្រាក់ជោគជ័យ! បូកលុយស្វ័យប្រវត្តិរួចរាល់</span>`;
+          setTimeout(() => closeTopupModal(), 1000);
+        } else {
+          document.getElementById("qr-status-msg").innerText = "🔄 មិនទាន់ឃើញការបង់ប្រាក់ទេ — កំពុងបន្តឆែក Auto...";
+        }
+      } catch (_) {
+        document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចភ្ជាប់ Server បានទេ";
+      }
+    }
+
     function startPaymentPolling() {
       clearInterval(pollInterval);
       if (!currentDepId) return;
       pollInterval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(3000) });
+          const res = await fetch(`${API_URL}/api/check_khqr/${encodeURIComponent(currentDepId)}`, { signal: AbortSignal.timeout(4000) });
           const data = await res.json();
           if (data.ok && data.status === "PAID") {
             clearInterval(pollInterval);
             clearInterval(qrInterval);
             balance = parseFloat(data.balance);
             updateHeaderUI();
-            document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ Admin បានបញ្ជាក់បូកលុយរួចរាល់!</span>`;
+            document.getElementById("qr-status-msg").innerHTML = `<span class="text-emerald-600 font-bold">✅ បង់ប្រាក់ជោគជ័យ! បូកលុយស្វ័យប្រវត្តិរួចរាល់</span>`;
             setTimeout(() => closeTopupModal(), 1000);
           }
         } catch (_) {}
-      }, 4000);
+      }, 3500);
     }
 
     async function generateQR() {
@@ -500,7 +518,7 @@
       }
       const amt = Math.round(rawVal * 100) / 100;
       document.getElementById("qr-amt-display").innerText = `$${amt.toFixed(2)}`;
-      document.getElementById("qr-status-msg").innerText = "កំពុងផ្ញើសំណើទៅ Admin...";
+      document.getElementById("qr-status-msg").innerText = "កំពុងបង្កើត Bakong KHQR...";
 
       let payload = buildKHQRPayload(amt);
       currentDepId = null;
@@ -510,16 +528,16 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: memberId, amount: amt }),
-          signal: AbortSignal.timeout(3500)
+          signal: AbortSignal.timeout(4000)
         });
         const data = await res.json();
         if (data.ok && data.qr_str) {
           payload = data.qr_str;
           currentDepId = data.dep_id;
-          document.getElementById("qr-status-msg").innerText = "ស្កេនរួចរង់ចាំ Admin បញ្ជាក់ដាក់ប្រាក់";
+          document.getElementById("qr-status-msg").innerText = "🔄 កំពុងរង់ចាំការទូទាត់ស្វ័យប្រវត្តិ (Auto)...";
           startPaymentPolling();
         } else {
-          document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចភ្ជាប់ Server បានទេ";
+          document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចបង្កើត KHQR ពី Server បានទេ";
         }
       } catch (_) {
         document.getElementById("qr-status-msg").innerText = "⚠️ មិនអាចភ្ជាប់ Server បានទេ";
