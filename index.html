@@ -29,7 +29,7 @@
 
       <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <div class="flex items-center gap-2.5 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800">
-          <span class="text-xs text-slate-400">🆔 <b id="u-id" class="text-slate-200">KZ-1001</b></span>
+          <span class="text-xs text-slate-400">🆔 <b id="u-id" class="text-slate-200">KZ-......</b></span>
           <span class="text-slate-700">|</span>
           <span class="text-sm text-emerald-400 font-bold">💰 $<span id="u-bal">0.00</span></span>
         </div>
@@ -44,7 +44,7 @@
           + ដាក់ប្រាក់
         </button>
         <button onclick="openMemberModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition">
-          ប្តូរគណនី
+          កូដសមាជិក
         </button>
       </div>
     </div>
@@ -54,7 +54,7 @@
   <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-7 flex-1">
     <div class="bg-gradient-to-r from-cyan-950/60 via-slate-900 to-slate-900 border border-cyan-800/40 rounded-2xl p-6 mb-7">
       <h2 class="text-xl sm:text-2xl font-bold mb-1.5 text-white">ទិញអាខោន Premium ដោយស្វ័យប្រវត្តិ 24/7</h2>
-      <p class="text-slate-300 text-sm">ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin ជាអ្នកបញ្ជាក់បូកលុយចូលគណនី) រួចទិញអីវ៉ាន់ភ្លាមៗ និងរក្សាទុកក្នុង «អីវ៉ាន់របស់ខ្ញុំ» មិនបាត់ឡើយ។</p>
+      <p class="text-slate-300 text-sm">ភ្ញៀវម្នាក់ៗទទួលបានលេខកូដសមាជិកផ្ទាល់ខ្លួនមិនដូចគ្នា ស្កេន Bakong KHQR ដើម្បីផ្ញើសំណើដាក់ប្រាក់ (Admin បញ្ជាក់បូកលុយ) រួចទិញអីវ៉ាន់ភ្លាមៗ។</p>
     </div>
 
     <!-- Filter Buttons -->
@@ -70,15 +70,23 @@
     <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
   </main>
 
-  <!-- Member Modal -->
+  <!-- Member Modal (Unique Non-Duplicate Member Code, Anti-Spoof) -->
   <div id="member-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6">
-      <h3 class="text-lg font-bold mb-1.5">លេខកូដគណនីសមាជិក</h3>
-      <p class="text-xs text-slate-400 mb-4">បញ្ចូលលេខកូដគណនីរបស់អ្នក ដើម្បីមើលសមតុល្យ និងអីវ៉ាន់ដែលអ្នកបានទិញ។</p>
-      <input type="text" id="member-input" placeholder="ឧទាហរណ៍: KZ-1001" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white mb-4 focus:outline-none focus:border-cyan-500">
-      <div class="flex justify-end gap-2">
-        <button onclick="closeMemberModal()" class="px-4 py-2 text-sm text-slate-400 hover:text-white">បោះបង់</button>
-        <button onclick="saveMember()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-2 rounded-xl text-sm font-bold">រក្សាទុក</button>
+      <h3 class="text-lg font-bold mb-1.5">លេខកូដគណនីសមាជិកផ្ទាល់ខ្លួន</h3>
+      <p class="text-xs text-slate-400 mb-4">លេខកូដនេះត្រូវបានបង្កើតដោយស្វ័យប្រវត្តិមិនឱ្យដូចគ្នា និងការពារការបន្លំគណនីអ្នកដទៃ (មិនអាចវាយលេខកូដផ្សេងដោយសេរីបានទេ)។</p>
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="member-input" readonly class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-cyan-300 font-mono font-bold focus:outline-none select-all">
+        <button onclick="copyMemberCode()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition">ចម្លង</button>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <button onclick="generateNewUniqueMember()" class="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 px-3.5 py-2 rounded-xl text-xs font-bold transition">
+          🎲 បង្កើតកូដថ្មី
+        </button>
+        <div class="flex gap-2">
+          <button onclick="closeMemberModal()" class="px-4 py-2 text-sm text-slate-400 hover:text-white">បិទ</button>
+          <button onclick="closeMemberModal()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-5 py-2 rounded-xl text-sm font-bold">យល់ព្រម</button>
+        </div>
       </div>
     </div>
   </div>
@@ -87,7 +95,7 @@
   <div id="orders-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 my-auto">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-bold text-white">📦 អីវ៉ាន់របស់ខ្ញុំ (<span id="orders-modal-uid" class="text-cyan-400">KZ-1001</span>)</h3>
+        <h3 class="text-lg font-bold text-white">📦 អីវ៉ាន់របស់ខ្ញុំ (<span id="orders-modal-uid" class="text-cyan-400">KZ-......</span>)</h3>
         <button onclick="closeMyOrdersModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
       <p class="text-xs text-slate-400 mb-4">បង្ហាញតែអីវ៉ាន់ដែលគណនីរបស់អ្នកបានទិញប៉ុណ្ណោះ (អ្នកផ្សេងមិនអាចឃើញបានទេ)។</p>
@@ -102,7 +110,7 @@
         <h3 class="text-lg font-bold text-white">💳 ដាក់ប្រាក់ចូលគណនី (KHQR)</h3>
         <button onclick="closeTopupModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
-      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-1001</b> (សមតុល្យនឹងត្រូវបញ្ជាក់បូកចូលដោយ Admin)។</p>
+      <p class="text-xs text-slate-400 mb-4">ជ្រើសរើសចំនួនទឹកប្រាក់ (USD) ដើម្បីបង្កើត Bakong KHQR ស្កេនទូទាត់សម្រាប់គណនី <b id="topup-member-label" class="text-cyan-400">KZ-......</b> (សមតុល្យនឹងត្រូវបញ្ជាក់បូកចូលដោយ Admin)។</p>
 
       <div class="grid grid-cols-4 gap-2 mb-3">
         <button onclick="selectAmount(3)" class="preset-amt bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-xl text-xs font-bold transition">$3.00</button>
@@ -154,7 +162,6 @@
 
   <script>
     const API_URL = window.location.origin.startsWith("http") ? window.location.origin : "https://khmersmm-tk4x.onrender.com";
-    const DEFAULT_MEMBER = "KZ-1001";
 
     const ICONS = {
       chatgpt_pro: `<div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -188,10 +195,27 @@
       { id: "acc_capcut_pro_1", key: "capcut_pro", title: "CapCut Pro", price: 3.99, duration: "1ខែ", category: "design", desc: "កាត់តវីដេអូប្រើ Effect, Transitions និង Export គុណភាពខ្ពស់គ្មាន Watermark។" }
     ];
 
+    function createUniqueMemberCode() {
+      const arr = new Uint32Array(2);
+      crypto.getRandomValues(arr);
+      const numPart = (arr[0] % 900000) + 100000;
+      const alphaPart = (arr[1] % 90) + 10;
+      return `KZ-${numPart}${alphaPart}`;
+    }
+
+    function initMemberId() {
+      let saved = localStorage.getItem("kz_unique_member_id");
+      if (!saved || saved === "KZ-1001" || saved === "00000") {
+        saved = createUniqueMemberCode();
+        localStorage.setItem("kz_unique_member_id", saved);
+      }
+      return saved;
+    }
+
     let allAccounts = [...DEMO_ACCOUNTS];
     let myOrders = [];
     let currentCategory = "all";
-    let memberId = localStorage.getItem("kz_member_id") || DEFAULT_MEMBER;
+    let memberId = initMemberId();
     let balance = 0.00;
     let currentDepId = null;
     let qrInterval = null;
@@ -223,7 +247,7 @@
       document.getElementById("topup-member-label").innerText = memberId;
       document.getElementById("orders-modal-uid").innerText = memberId;
       document.getElementById("my-orders-count").innerText = myOrders.length;
-      localStorage.setItem("kz_member_id", memberId);
+      localStorage.setItem("kz_unique_member_id", memberId);
     }
 
     function filterCategory(cat) {
@@ -563,6 +587,25 @@
       modal.classList.remove("flex");
     }
 
+    function copyMemberCode() {
+      navigator.clipboard?.writeText(memberId).catch(() => {});
+      alert("✅ បានចម្លងលេខកូដសមាជិក: " + memberId);
+    }
+
+    function generateNewUniqueMember() {
+      if (!confirm("តើអ្នកប្រាកដទេថាចង់បង្កើតលេខកូដសមាជិកថ្មី? (សមតុល្យ និងអីវ៉ាន់ចាស់នឹងស្ថិតនៅក្រោមកូដចាស់)")) return;
+      let nextCode = createUniqueMemberCode();
+      while (nextCode === memberId) {
+        nextCode = createUniqueMemberCode();
+      }
+      memberId = nextCode;
+      balance = 0.00;
+      myOrders = loadLocalOrders(memberId);
+      document.getElementById("member-input").value = memberId;
+      updateHeaderUI();
+      syncBackend();
+    }
+
     function openMyOrdersModal() {
       renderMyOrders();
       const modal = document.getElementById("orders-modal");
@@ -574,17 +617,6 @@
       const modal = document.getElementById("orders-modal");
       modal.classList.add("hidden");
       modal.classList.remove("flex");
-    }
-
-    function saveMember() {
-      const val = document.getElementById("member-input").value.trim();
-      if (!val) return;
-      memberId = val;
-      balance = 0.00;
-      myOrders = loadLocalOrders(memberId);
-      updateHeaderUI();
-      closeMemberModal();
-      syncBackend();
     }
 
     function showResultModal(secretText) {
