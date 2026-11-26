@@ -167,25 +167,13 @@
     const API_URL = window.location.origin.startsWith("http") ? window.location.origin : "https://khmersmm-tk4x.onrender.com";
 
     const ICONS = {
-      chatgpt_pro: `<div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3.5 5.5"/><path d="M20.8 9a6 6 0 0 1-3 8.2c-2.2 1-4.8.5-6.5-1"/><path d="M15.6 20.6a6 6 0 0 1-8.5-2.2c-1.3-2.1-1-4.8.5-6.6"/><path d="M3.2 15a6 6 0 0 1 3-8.2c2.2-1 4.8-.5 6.5 1"/><path d="M8.4 3.4a6 6 0 0 1 8.5 2.2c1.3 2.1 1 4.8-.5 6.6"/></svg>
-      </div>`,
-      surfshark_vpn: `<div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="2"/><path d="M12 13v3"/></svg>
-      </div>`,
-      super_grok: `<div class="w-12 h-12 rounded-2xl bg-slate-700/50 border border-slate-600 flex items-center justify-center text-white">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4l16 16"/><path d="M20 4L4 20"/><path d="M12 3v18"/></svg>
-      </div>`,
-      youtube_premium: `<div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-      </div>`,
-      canva_pro: `<div class="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 font-extrabold text-xl">C</div>`,
-      gemini_pro: `<div class="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
-      </div>`,
-      capcut_pro: `<div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9l8 6"/><path d="M16 9l-8 6"/></svg>
-      </div>`
+      chatgpt_pro: `<img src="./chatgpt.png" alt="ChatGPT Pro" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      surfshark_vpn: `<img src="./surfshark.png" alt="VPN Surfshark" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      super_grok: `<img src="./grok.png" alt="Supper Grok" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      youtube_premium: `<img src="./youtube.png" alt="YouTube Premium" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      canva_pro: `<img src="./canva.png" alt="Canva Pro" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      gemini_pro: `<img src="./gemini.png" alt="Gemini Pro" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`,
+      capcut_pro: `<img src="./capcut.png" alt="CapCut Pro" onerror="this.style.display='none'" class="w-12 h-12 rounded-2xl object-cover border border-slate-700 bg-slate-800">`
     };
 
     const DEMO_ACCOUNTS = [
@@ -342,7 +330,7 @@
         const accRes = await fetch(`${API_URL}/api/accounts`, { signal: AbortSignal.timeout(3000) });
         if (accRes.ok) {
           const accData = await accRes.json();
-          if (accData.ok && Array.isArray(accData.accounts)) {
+          if (accData.ok && Array.isArray(accData.accounts) && accData.accounts.length > 0) {
             allAccounts = accData.accounts.map(a => {
               const fallback = DEMO_ACCOUNTS.find(d => d.id === a.id || d.title === a.title) || {};
               return { ...fallback, ...a, key: a.key || fallback.key || "chatgpt_pro", category: a.category || fallback.category || "ai", duration: a.duration || fallback.duration || "1ខែ" };
@@ -401,7 +389,6 @@
           myOrders.unshift(orderEntry);
           saveLocalOrders(memberId, myOrders);
           updateHeaderUI();
-          allAccounts = allAccounts.filter(item => item.id !== acc.id);
           renderAccounts();
           showResultModal(data.account_data);
         } else {
