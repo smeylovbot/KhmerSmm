@@ -2,8 +2,7 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
 ║     Kairozen Deposit Bot — カイロゼン                          ║
-║     User: 💳 ដាក់ប្រាក់ · Admin: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ   ║
-║     + Safe Account Store API, Order History & KHQR           ║
+║     Auto Payment (Bakong KHQR) + Safe Store & Order History  ║
 ║     Compatible: Python 3.10+ · Termux / Pydroid 3 / Render   ║
 ╚══════════════════════════════════════════════════════════════╝
 """
@@ -63,7 +62,7 @@ def _ensure_deps():
 _ensure_deps()
 
 # ═══════════════════════════════════════════════════════════
-#  CONFIG
+#  CONFIG (Bakong Open API Token & Merchant Info)
 # ═══════════════════════════════════════════════════════════
 BOT_TOKEN          = "9185336041:AAHyrGRDnIrSzT9tqDWKMZIGjqmVNU4X2HM"
 ADMIN_ID           = 8807182741
@@ -76,7 +75,7 @@ MERCHANT_CITY      = "Phnom Penh"
 DEPOSIT_EXPIRE_SEC = 300
 
 # ═══════════════════════════════════════════════════════════
-#  FILES & THREAD LOCK (កុំឱ្យបាត់ទិន្នន័យ ឬទិញជាន់គ្នា)
+#  FILES & THREAD LOCK
 # ═══════════════════════════════════════════════════════════
 DATA_LOCK      = threading.RLock()
 WALLETS_FILE   = "aio_wallets.json"
@@ -203,7 +202,7 @@ bot = telebot.TeleBot(BOT_TOKEN, parse_mode=None)
 
 def _make_session():
     s = http_req.Session()
-    r = Retry(total=3, backoff_factor=2, status_forcelist=[500, 502, 503, 504])
+    r = Retry(total=2, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     a = HTTPAdapter(max_retries=r)
     s.mount("http://", a)
     s.mount("https://", a)
@@ -289,14 +288,70 @@ def _generate_khqr(uid, amount, note=""):
     return ""
 
 def _check_bakong(md5):
+    if not md5:
+        return False
+    # 1) Try bakong-khqr SDK check_payment
     try:
         from bakong_khqr import KHQR as _BK
         k = _BK(BAKONG_TOKEN)
         status = k.check_payment(str(md5))
-        return status == "PAID"
+        if status == "PAID" or (isinstance(status, dict) and status.get("responseCode") == 0 and status.get("data")):
+            return True
     except Exception as e:
-        logger.error(f"{CLR_RED}[_check_bakong] {e}{CLR_RESET}")
+        logger.debug(f"SDK check_payment fallback: {e}")
+
+    # 2) Direct Bakong Open API check_transaction_by_md5 fallback
+    try:
+        r = http.post(
+            "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5",
+            json={"md5": str(md5)},
+            headers={
+                "Authorization": f"Bearer {BAKONG_TOKEN}",
+                "Content-Type": "application/json"
+            },
+            timeout=8,
+        )
+        if r.ok:
+            j = r.json()
+            if j.get("responseCode") == 0 and j.get("data"):
+                return True
+    except Exception as e:
+        logger.debug(f"Direct Bakong API check error: {e}")
+
     return False
+
+def _confirm_deposit_if_pending(dep_id, source="Auto"):
+    with DATA_LOCK:
+        dep = store_deps.get(dep_id)
+        if not dep:
+            return False, 0.0
+        if dep.get("status") == "confirmed":
+            return True, bal(dep["uid"])
+        if dep.get("status") == "rejected":
+            return False, bal(dep["uid"])
+
+        uid_str = str(dep["uid"])
+        amount = round(float(dep["amount"]), 2)
+        add_bal(uid_str, amount)
+        dep["status"] = "confirmed"
+        dep["confirmed_via"] = source
+        _save(STORE_DEP_FILE, store_deps)
+        new_b = bal(uid_str)
+
+    try:
+        bot.send_message(
+            ADMIN_ID,
+            f"✅ <b>Auto Payment ជោគជ័យ ({source})!</b>\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"🆔 User/Member: <code>{uid_str}</code>\n"
+            f"💰 បញ្ញើ: <b>${amount:.2f}</b>\n"
+            f"💳 សមតុល្យថ្មី: <b>${new_b:.2f}</b>",
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
+
+    return True, new_b
 
 def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
     deadline = time.time() + DEPOSIT_EXPIRE_SEC
@@ -310,44 +365,28 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
             md5 = dep.get("md5", "")
 
         if md5 and _check_bakong(md5):
-            with DATA_LOCK:
-                dep = store_deps.get(dep_id)
-                if not dep or dep.get("status") != "pending":
-                    return
-                total_credit = round(amount, 2)
-                add_bal(uid_str, total_credit)
-                store_deps[dep_id]["status"] = "confirmed"
-                _save(STORE_DEP_FILE, store_deps)
-                new_b = bal(uid_str)
-
-            msg = (
-                f"✅ <b>ដាក់លុយបានជោគជ័យ!</b>\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"💰 បញ្ញើ: <b>${amount:.2f}</b>\n"
-                f"💳 សាច់ប្រាក់: <b>${new_b:.2f}</b>"
-            )
-            if uid is not None:
-                try:
-                    bot.send_message(uid, msg, parse_mode="HTML", reply_markup=main_kb())
-                except Exception:
-                    pass
-            try:
-                bot.send_message(
-                    ADMIN_ID,
-                    f"💰 <b>ដាក់លុយ ✅ (Auto)</b>\n👤 <code>{uid_str}</code>\n💰 ${amount:.2f}",
-                    parse_mode="HTML"
+            ok, new_b = _confirm_deposit_if_pending(dep_id, source="Bakong Auto")
+            if ok:
+                msg = (
+                    f"✅ <b>ដាក់លុយបានជោគជ័យ (Auto)!</b>\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"💰 បញ្ញើ: <b>${amount:.2f}</b>\n"
+                    f"💳 សាច់ប្រាក់: <b>${new_b:.2f}</b>"
                 )
-            except Exception:
-                pass
-            if uid is not None and sent_msg_id:
-                try:
-                    bot.edit_message_caption(
-                        chat_id=uid, message_id=sent_msg_id,
-                        caption=f"💳 <b>ដាក់ប្រាក់ (បានទូទាត់រួចរាល់ ✅)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
-                        parse_mode="HTML"
-                    )
-                except Exception:
-                    pass
+                if uid is not None:
+                    try:
+                        bot.send_message(uid, msg, parse_mode="HTML", reply_markup=main_kb())
+                    except Exception:
+                        pass
+                    if sent_msg_id:
+                        try:
+                            bot.edit_message_caption(
+                                chat_id=uid, message_id=sent_msg_id,
+                                caption=f"💳 <b>ដាក់ប្រាក់ (បានទូទាត់រួចរាល់ ✅)</b>\n━━━━━━━━━━━━━━━━━━\n💰 ចំនួន: <b>${amount:.2f}</b>",
+                                parse_mode="HTML"
+                            )
+                        except Exception:
+                            pass
             return
 
         rem_sec = int(deadline - time.time())
@@ -359,7 +398,7 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
             timer_str = f"{mins_left:02d}:{secs_left:02d}"
             try:
                 updated_cap = (
-                    f"💳 <b>ដាក់ប្រាក់</b>\n"
+                    f"💳 <b>ដាក់ប្រាក់ (Auto Check Bakong)</b>\n"
                     f"━━━━━━━━━━━━━━━━━━\n"
                     f"💰 ចំនួន: <b>${amount:.2f}</b>\n"
                     f"⏱ រាប់ថយក្រោយ: <b>{timer_str} នាទី</b>\n"
@@ -370,7 +409,7 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
             except Exception:
                 pass
 
-        time.sleep(5)
+        time.sleep(3)
 
     with DATA_LOCK:
         dep = store_deps.get(dep_id)
@@ -394,7 +433,7 @@ def _watch_deposit(uid, uid_str, dep_id, amount, sent_msg_id=None):
 
 def _send_deposit_qr(uid, amount):
     uid_str = str(uid)
-    qr_str = _generate_khqr(uid, amount, f"uid={uid} ${amount}")
+    qr_str = _generate_khqr(uid, amount, f"uid{uid}_{int(time.time())}")
     if not qr_str:
         bot.send_message(uid, "⚠️ មានបញ្ហា Generate QR! ទំនាក់ Admin", parse_mode="HTML", reply_markup=main_kb())
         return
@@ -418,7 +457,7 @@ def _send_deposit_qr(uid, amount):
         _save(STORE_DEP_FILE, store_deps)
 
     cap = (
-        f"💳 <b>ដាក់ប្រាក់</b>\n"
+        f"💳 <b>ដាក់ប្រាក់ (Auto Check Bakong)</b>\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"💰 ចំនួន: <b>${amount:.2f}</b>\n"
         f"⏱ រាប់ថយក្រោយ: <b>05:00 នាទី</b>\n"
@@ -428,7 +467,7 @@ def _send_deposit_qr(uid, amount):
 
     try:
         admin_txt = (
-            f"📥 <b>ការស្នើដាក់លុយថ្មី!</b>\n"
+            f"📥 <b>ការស្នើដាក់លុយថ្មី (Auto Watch)!</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"👤 User ID: <code>{uid_str}</code>\n"
             f"💰 ទឹកប្រាក់ស្នើ: <b>${amount:.2f}</b>"
@@ -439,36 +478,16 @@ def _send_deposit_qr(uid, amount):
 
     img_buf = None
     try:
-        import base64
-        r = http.post(
-            "https://api.bakongrelay.com/v1/generate_khqr_image",
-            json    = {"qr": qr_str},
-            headers = {"Authorization": f"Bearer {BAKONG_TOKEN}", "Content-Type": "application/json"},
-            timeout = 10,
-        )
-        if r.ok and r.json().get("responseCode") == 0:
-            img_b64 = r.json().get("data", {}).get("image", "")
-            if img_b64:
-                if "," in img_b64:
-                    img_b64 = img_b64.split(",", 1)[1]
-                img_buf = io.BytesIO(base64.b64decode(img_b64))
-                img_buf.seek(0)
-                img_buf.name = "khqr.png"
+        import qrcode as _qrc
+        qr = _qrc.QRCode(box_size=6, border=2)
+        qr.add_data(qr_str)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        img_buf = io.BytesIO()
+        img.save(img_buf, format="PNG")
+        img_buf.seek(0)
     except Exception:
         pass
-
-    if img_buf is None:
-        try:
-            import qrcode as _qrc
-            qr = _qrc.QRCode(box_size=6, border=2)
-            qr.add_data(qr_str)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-            img_buf = io.BytesIO()
-            img.save(img_buf, format="PNG")
-            img_buf.seek(0)
-        except Exception:
-            pass
 
     sent_msg_id = None
     if img_buf:
@@ -506,7 +525,7 @@ def _show_welcome(uid, name="User"):
     caption = (
         f"👋 សួស្តី <b>{name}</b> ស្វាគមន៍មកកាន់ <b>Kairozen カイロゼン</b>!\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"💳 ចុច <b>💳 ដាក់ប្រាក់</b> ដើម្បីបញ្ចូលលុយតាម Bakong KHQR"
+        f"💳 ចុច <b>💳 ដាក់ប្រាក់</b> ដើម្បីបញ្ចូលលុយតាម Bakong KHQR (Auto)"
     )
     bot.send_message(uid, caption, parse_mode="HTML", reply_markup=main_kb())
 
@@ -558,26 +577,19 @@ def cb_manual_dep(call):
         if not dep:
             bot.answer_callback_query(call.id, "❌ សំណើនេះរកមិនឃើញ!", show_alert=True)
             return
-
         target_uid = str(dep["uid"])
-        amount = float(dep["amount"])
-        total_credit = round(amount, 2)
-
-        if action == "approve":
-            if dep.get("status") == "confirmed":
-                bot.answer_callback_query(call.id, "⚠️ បានបញ្ជាក់រួចរាល់ហើយ!", show_alert=True)
-                return
-
-            add_bal(target_uid, total_credit)
-            dep["status"] = "confirmed"
-            _save(STORE_DEP_FILE, store_deps)
-            new_b = bal(target_uid)
+        amount = round(float(dep["amount"]), 2)
+        status = dep.get("status")
 
     if action == "approve":
+        if status == "confirmed":
+            bot.answer_callback_query(call.id, "⚠️ បានបញ្ជាក់រួចរាល់ហើយ!", show_alert=True)
+            return
+        _, new_b = _confirm_deposit_if_pending(dep_id, source="Admin Manual")
         bot.answer_callback_query(call.id, "✅ បានដាក់ប្រាក់ឱ្យគេរួចរាល់!")
         try:
             bot.edit_message_text(
-                f"✅ <b>បានដាក់ប្រាក់ឱ្យគេរួចរាល់!</b>\n━━━━━━━━━━━━━━━━━━\n👤 User: <code>{target_uid}</code>\n💰 ចំនួន: <b>${total_credit:.2f}</b>\n💳 សមតុល្យថ្មី: <b>${new_b:.2f}</b>",
+                f"✅ <b>បានដាក់ប្រាក់ឱ្យគេរួចរាល់!</b>\n━━━━━━━━━━━━━━━━━━\n👤 User: <code>{target_uid}</code>\n💰 ចំនួន: <b>${amount:.2f}</b>\n💳 សមតុល្យថ្មី: <b>${new_b:.2f}</b>",
                 chat_id=uid, message_id=call.message.message_id, parse_mode="HTML"
             )
         except Exception:
@@ -605,11 +617,6 @@ def cb_manual_dep(call):
             )
         except Exception:
             pass
-        if target_uid.isdigit():
-            try:
-                bot.send_message(int(target_uid), "❌ សំណើដាក់ប្រាក់របស់អ្នកត្រូវបានបដិសេធ។", parse_mode="HTML", reply_markup=main_kb())
-            except Exception:
-                pass
 
 @bot.message_handler(func=lambda m: True)
 def handle(message):
@@ -841,7 +848,9 @@ def api_buy_account():
 @flask_app.route("/api/create_khqr", methods=["POST"])
 def api_create_khqr():
     data = flask_request.get_json(silent=True) or {}
-    mid = str(data.get("uid", "KZ-1001")).strip() or "KZ-1001"
+    mid = str(data.get("uid", "")).strip()
+    if not mid:
+        return jsonify({"ok": False, "error": "មិនមាន Member ID ទេ!"}), 400
     try:
         amount = round(float(data.get("amount", 0)), 2)
     except Exception:
@@ -850,7 +859,7 @@ def api_create_khqr():
     if amount < 0.10:
         return jsonify({"ok": False, "error": "ចំនួនទឹកប្រាក់ត្រូវចាប់ពី $0.10 ឡើងទៅ!"}), 400
 
-    qr_str = _generate_khqr(mid, amount, f"web_{mid}")
+    qr_str = _generate_khqr(mid, amount, f"web_{int(time.time())}")
     if not qr_str:
         return jsonify({"ok": False, "error": "មិនអាចបង្កើត Bakong KHQR បានទេ!"}), 500
 
@@ -874,7 +883,7 @@ def api_create_khqr():
 
     try:
         admin_txt = (
-            f"🌐 <b>ការស្នើដាក់ប្រាក់ពីវេបសាយ!</b>\n"
+            f"🌐 <b>សំណើ Auto Payment ពីវេបសាយ!</b>\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🆔 Member: <code>{mid}</code>\n"
             f"💰 ចំនួន: <b>${amount:.2f}</b>"
@@ -910,32 +919,9 @@ def api_check_khqr(dep_id):
         md5 = dep.get("md5", "")
 
     if md5 and _check_bakong(md5):
-        with DATA_LOCK:
-            dep = store_deps.get(dep_id)
-            if not dep:
-                return jsonify({"ok": False, "error": "រកមិនឃើញវិក្កយបត្រនេះទេ!"}), 404
-            if dep.get("status") == "confirmed":
-                return jsonify({"ok": True, "status": "PAID", "balance": bal(dep["uid"])})
-
-            mid = str(dep["uid"])
-            amount = round(float(dep["amount"]), 2)
-            add_bal(mid, amount)
-            dep["status"] = "confirmed"
-            _save(STORE_DEP_FILE, store_deps)
-            new_b = bal(mid)
-
-        try:
-            bot.send_message(
-                ADMIN_ID,
-                f"✅ <b>ភ្ញៀវវេបសាយបង់លុយជោគជ័យ!</b>\n"
-                f"🆔 Member: <code>{mid}</code>\n"
-                f"💰 ចំនួន: <b>${amount:.2f}</b>",
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
-
-        return jsonify({"ok": True, "status": "PAID", "balance": new_b})
+        ok, new_b = _confirm_deposit_if_pending(dep_id, source="Bakong Web Auto")
+        if ok:
+            return jsonify({"ok": True, "status": "PAID", "balance": new_b})
 
     return jsonify({"ok": True, "status": "PENDING"})
 
@@ -948,7 +934,7 @@ def print_banner():
     banner = f"""
 {CLR_CYAN}{CLR_BOLD}╔══════════════════════════════════════════════════════════════╗
 ║     {CLR_GREEN}Kairozen Deposit Bot — カイロゼン                          ║
-║     {CLR_YELLOW}User: 💳 ដាក់ប្រាក់ · Admin: 👥 អ្នកប្រើប្រាស់ & 📊 ស្ថិតិ   ║
+║     {CLR_YELLOW}Auto Payment Bakong KHQR + Safe Store & Order History  ║
 ║     {CLR_WHITE}Compatible: Python 3.10+ · Termux / Pydroid 3         {CLR_CYAN}║
 ╚══════════════════════════════════════════════════════════════╝{CLR_RESET}
 """
