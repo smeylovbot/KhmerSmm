@@ -290,33 +290,40 @@ def _generate_khqr(uid, amount, note=""):
 def _check_bakong(md5):
     if not md5:
         return False
-    # 1) Try bakong-khqr SDK check_payment
+    # 1) Try bakong-khqr SDK
     try:
         from bakong_khqr import KHQR as _BK
         k = _BK(BAKONG_TOKEN)
-        status = k.check_payment(str(md5))
-        if status == "PAID" or (isinstance(status, dict) and status.get("responseCode") == 0 and status.get("data")):
+        res = k.check_payment(str(md5))
+        logger.info(f"[Bakong SDK] md5={md5} -> {res}")
+        if res == "PAID":
             return True
+        if isinstance(res, dict):
+            if str(res.get("responseCode")) == "0" and res.get("data"):
+                return True
+            if str(res.get("status", "")).upper() == "PAID":
+                return True
     except Exception as e:
-        logger.debug(f"SDK check_payment fallback: {e}")
+        logger.warning(f"[Bakong SDK Error] {e}")
 
-    # 2) Direct Bakong Open API check_transaction_by_md5 fallback
+    # 2) Direct Bakong Open API check_transaction_by_md5
     try:
         r = http.post(
             "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5",
             json={"md5": str(md5)},
             headers={
                 "Authorization": f"Bearer {BAKONG_TOKEN}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             },
-            timeout=8,
+            timeout=10,
         )
+        logger.info(f"[Bakong API] status={r.status_code} body={r.text[:300]}")
         if r.ok:
-            j = r.json()
-            if j.get("responseCode") == 0 and j.get("data"):
+            data_json = r.json()
+            if str(data_json.get("responseCode")) == "0" and data_json.get("data"):
                 return True
     except Exception as e:
-        logger.debug(f"Direct Bakong API check error: {e}")
+        logger.warning(f"[Bakong API Error] {e}")
 
     return False
 
